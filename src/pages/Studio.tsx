@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import AnimeCard from '@/components/AnimeCard'
+import AnimeLoader from '@/components/AnimeLoader'
 import AuthModal from '@/components/AuthModal'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import Layout from '@/components/Layout'
@@ -45,14 +46,7 @@ export default function Studio() {
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto animate-pulse px-4 py-12">
-          <div className="mb-8 h-32 w-full rounded-xl bg-card" />
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-64 rounded-xl bg-card" />
-            ))}
-          </div>
-        </div>
+        <AnimeLoader label="Loading studio profile" />
       </Layout>
     )
   }

@@ -15,10 +15,16 @@ const toQueryString = (params: Record<string, any> = {}) => {
 const fetchJson = async (path: string, params?: Record<string, any>) => {
   const query = toQueryString(params)
   const res = await fetch(`${API_BASE}${path}${query ? `?${query}` : ''}`)
-  const data = await res.json()
+  const data = await res.json().catch(() => ({}))
 
   if (!res.ok) {
-    throw new Error(data?.error || 'Request failed')
+    const error = new Error(data?.error || `Request failed (${res.status})`) as Error & {
+      status?: number
+      notFound?: boolean
+    }
+    error.status = res.status
+    error.notFound = res.status === 404
+    throw error
   }
 
   return data

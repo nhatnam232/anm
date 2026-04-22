@@ -23,6 +23,7 @@ import {
 import Layout from '@/components/Layout'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AnimeCard from '@/components/AnimeCard'
+import AnimeLoader from '@/components/AnimeLoader'
 import HeroArtwork from '@/components/HeroArtwork'
 import ReloadLink from '@/components/ReloadLink'
 import { fetchAnimeDetails } from '@/lib/api'
@@ -110,19 +111,7 @@ export default function AnimeDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="animate-pulse">
-          <div className="h-[40vh] w-full bg-card" />
-          <div className="container mx-auto -mt-24 px-4">
-            <div className="flex gap-8">
-              <div className="z-10 h-96 w-64 flex-shrink-0 rounded-xl bg-gray-800" />
-              <div className="mt-28 flex-1 space-y-4">
-                <div className="h-10 w-1/2 rounded bg-gray-800" />
-                <div className="h-6 w-1/4 rounded bg-gray-800" />
-                <div className="mt-8 h-32 w-full rounded bg-gray-800" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <AnimeLoader label="Fetching anime data" />
       </Layout>
     )
   }

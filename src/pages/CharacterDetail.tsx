@@ -5,6 +5,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import Layout from '@/components/Layout'
 import CommentSection from '@/components/CommentSection'
 import ReloadLink from '@/components/ReloadLink'
+import AnimeLoader from '@/components/AnimeLoader'
 import { fetchCharacterDetails } from '@/lib/api'
 import { useManualTranslation } from '@/hooks/useManualTranslation'
 import { useLangContext } from '@/providers/LangProvider'
@@ -15,11 +16,13 @@ export default function CharacterDetail() {
   const [character, setCharacter] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
   const biography = useManualTranslation(character?.description, lang)
 
   const loadData = async () => {
     setLoading(true)
     setError(null)
+    setNotFound(false)
     try {
       const res = await fetchCharacterDetails(Number(id))
       if (res.success) {
@@ -27,9 +30,14 @@ export default function CharacterDetail() {
       } else {
         setError(t.loadError)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      setError(t.loadError)
+      // 404 from server → treat as "not found" (so we render the proper UI)
+      if (err?.status === 404 || err?.notFound) {
+        setNotFound(true)
+      } else {
+        setError(t.loadError)
+      }
     } finally {
       setLoading(false)
     }
@@ -43,16 +51,7 @@ export default function CharacterDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto animate-pulse px-4 py-12">
-          <div className="flex gap-8">
-            <div className="h-64 w-64 rounded-full bg-card" />
-            <div className="flex-1 space-y-4">
-              <div className="h-10 w-1/3 rounded bg-card" />
-              <div className="h-4 w-24 rounded bg-card" />
-              <div className="h-32 w-full rounded bg-card" />
-            </div>
-          </div>
-        </div>
+        <AnimeLoader label="Summoning character data" />
       </Layout>
     )
   }
@@ -77,7 +76,7 @@ export default function CharacterDetail() {
     )
   }
 
-  if (!character) {
+  if (notFound || !character) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center">

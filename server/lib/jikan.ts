@@ -115,6 +115,15 @@ async function fetchJson<T>(
     if (!response.ok) {
       // On upstream failure, keep serving stale if available rather than surfacing a 5xx.
       if (cached?.value) return cached.value as T
+
+      // 404 from MyAnimeList means "not found" — surface a typed error so
+      // callers can convert it to a 404 instead of a 500.
+      if (response.status === 404) {
+        const err = new Error(`Resource not found: ${url}`) as Error & { status?: number }
+        err.status = 404
+        throw err
+      }
+
       const message = await response.text()
       throw new Error(message || `Upstream request failed with ${response.status}`)
     }
@@ -578,10 +587,28 @@ export async function searchAnime(params: {
 }
 
 export async function getCharacterDetails(id: number) {
-  const [characterPayload, animePayload] = await Promise.all([
-    fetchJson<any>(`/characters/${id}/full`),
-    fetchJson<any>(`/characters/${id}/anime`),
-  ])
+  // /full sometimes 404s for characters that exist via /anime/:id/characters
+  // (Jikan inconsistency). Try /full first, then plain /:id, and only fail if
+  // both come back as not-found. The companion /anime call is best-effort.
+  let characterPayload: any = null
+  try {
+    characterPayload = await fetchJson<any>(`/characters/${id}/full`, undefined, DETAIL_CACHE_TTL_MS)
+  } catch (err: any) {
+    if (err?.status === 404) {
+      try {
+        characterPayload = await fetchJson<any>(`/characters/${id}`, undefined, DETAIL_CACHE_TTL_MS)
+      } catch (err2: any) {
+        if (err2?.status === 404) return null
+        throw err2
+      }
+    } else {
+      throw err
+    }
+  }
+
+  const animePayload = await fetchJson<any>(`/characters/${id}/anime`, undefined, DETAIL_CACHE_TTL_MS).catch(
+    () => null,
+  )
 
   const character = characterPayload?.data
 
