@@ -1,5 +1,5 @@
 -- ============================================================
--- ANM WIKI - Translation Cache
+-- Anime Wiki - Translation Cache
 -- Chạy file này trong Supabase SQL Editor.
 -- Lưu bản dịch để không tốn quota DeepL cho cùng 1 đoạn văn 2 lần.
 -- ============================================================

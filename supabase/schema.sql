@@ -1,5 +1,5 @@
 -- ============================================================
--- ANM WIKI - Supabase schema
+-- Anime Wiki - Supabase schema
 -- Run this ONCE in the Supabase SQL editor.
 -- Idempotent: safe to re-run; it uses IF NOT EXISTS / CREATE OR REPLACE.
 -- ============================================================

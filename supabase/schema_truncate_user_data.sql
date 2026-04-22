@@ -1,5 +1,5 @@
 -- ============================================================
--- ANM WIKI — User-data wipe for AniList migration
+-- Anime Wiki — User-data wipe for AniList migration
 --
 -- After moving the data source from Jikan/MAL to AniList, all stored anime /
 -- character / studio IDs reference the OLD schema (MAL ids). To avoid orphan

@@ -13,7 +13,7 @@ export default function Logo({ size = 32, showWordmark = true, className = '' }:
         viewBox="0 0 64 64"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="ANM WIKI logo"
+        aria-label="Anime Wiki logo"
       >
         <defs>
           <linearGradient id="anmBgGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">

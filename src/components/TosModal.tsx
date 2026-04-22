@@ -43,7 +43,7 @@ export default function TosModal() {
               <h2 className="text-lg font-bold text-white">
                 {lang === 'vi' ? 'Điều Khoản Sử Dụng' : 'Terms of Service'}
               </h2>
-              <p className="text-sm text-gray-400">ANM WIKI</p>
+              <p className="text-sm text-gray-400">Anime Wiki</p>
             </div>
           </div>
         </div>
@@ -53,12 +53,12 @@ export default function TosModal() {
           {lang === 'vi' ? (
             <div className="space-y-3">
               <p>
-                Chào mừng bạn đến với <strong className="text-primary">ANM WIKI</strong>! Trước khi tiếp tục, vui lòng đọc và đồng ý với các điều khoản sau:
+                Chào mừng bạn đến với <strong className="text-primary">Anime Wiki</strong>! Trước khi tiếp tục, vui lòng đọc và đồng ý với các điều khoản sau:
               </p>
               <ul className="space-y-2 text-gray-400">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary">•</span>
-                  ANM WIKI là dự án <strong className="text-white">phi chính thức</strong>, không liên kết với bất kỳ hãng anime nào.
+                  Anime Wiki là dự án <strong className="text-white">phi chính thức</strong>, không liên kết với bất kỳ hãng anime nào.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary">•</span>
@@ -84,12 +84,12 @@ export default function TosModal() {
           ) : (
             <div className="space-y-3">
               <p>
-                Welcome to <strong className="text-primary">ANM WIKI</strong>! Before continuing, please read and agree to the following terms:
+                Welcome to <strong className="text-primary">Anime Wiki</strong>! Before continuing, please read and agree to the following terms:
               </p>
               <ul className="space-y-2 text-gray-400">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary">•</span>
-                  ANM WIKI is an <strong className="text-white">unofficial</strong> project, not affiliated with any anime studio.
+                  Anime Wiki is an <strong className="text-white">unofficial</strong> project, not affiliated with any anime studio.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 text-primary">•</span>

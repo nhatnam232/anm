@@ -38,7 +38,7 @@ export default function Footer() {
           </ReloadLink>
         </div>
         <div className="text-sm text-gray-600">
-          &copy; {new Date().getFullYear()} ANM WIKI. {t.unofficialIndex}
+          &copy; {new Date().getFullYear()} Anime Wiki. {t.unofficialIndex}
         </div>
       </div>
     </footer>

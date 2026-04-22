@@ -1,5 +1,5 @@
 /**
- * AniList GraphQL adapter — sole upstream data source for ANM WIKI.
+ * AniList GraphQL adapter — sole upstream data source for Anime Wiki.
  *
  * Migration notes (replaces Jikan/MyAnimeList):
  *   - Public IDs we hand to the frontend are now AniList IDs (anime,

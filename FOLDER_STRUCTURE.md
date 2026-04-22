@@ -1,4 +1,4 @@
-# ANM WIKI - Folder Structure (6 Core Features)
+# Anime Wiki - Folder Structure (6 Core Features)
 
 ## Bước 2: Đề xuất cấu trúc thư mục
 

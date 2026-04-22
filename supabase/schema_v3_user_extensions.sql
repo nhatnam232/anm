@@ -1,5 +1,5 @@
 -- ============================================================
--- ANM WIKI — Schema v3: profile extensions + comment image upload
+-- Anime Wiki — Schema v3: profile extensions + comment image upload
 --
 -- Adds:
 --   • profiles.gender, profiles.birthday, profiles.spotify_url, profiles.bio

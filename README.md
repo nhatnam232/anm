@@ -1,4 +1,4 @@
-# ANM WIKI
+# Anime Wiki
 
 A modern anime wiki built with **React + TypeScript + Vite** on the frontend and a thin **Express** API on the backend, deployed on **Vercel** at <https://animewiki.vercel.app>.
 

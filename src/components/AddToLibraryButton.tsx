@@ -111,10 +111,17 @@ export default function AddToLibraryButton({
     setOpen(false)
     if (error) {
       setCurrentStatus(previous) // rollback
-      toast.error(
-        lang === 'vi' ? 'Không thể lưu vào thư viện' : 'Could not save to library',
-        error.message,
-      )
+      console.error('[AddToLibrary] upsert failed', error)
+      // Common case: user_library table missing or RLS not configured.
+      const friendly =
+        lang === 'vi'
+          ? error.code === '42P01'
+            ? 'Bảng user_library chưa tồn tại — hãy chạy supabase/schema_v3_user_extensions.sql.'
+            : `Không thể lưu vào thư viện (${error.code ?? 'lỗi'})`
+          : error.code === '42P01'
+            ? 'Table user_library does not exist — run supabase/schema_v3_user_extensions.sql.'
+            : `Could not save to library (${error.code ?? 'error'})`
+      toast.error(friendly, error.message)
       return
     }
     const opt = STATUS_OPTIONS.find((o) => o.key === status)!

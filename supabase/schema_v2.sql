@@ -1,5 +1,5 @@
 -- ============================================================
--- ANM WIKI - Schema v2 (6 Core Features Extension)
+-- Anime Wiki - Schema v2 (6 Core Features Extension)
 -- Run this AFTER the base schema.sql in the Supabase SQL editor.
 -- Idempotent: safe to re-run; uses IF NOT EXISTS / CREATE OR REPLACE.
 -- ============================================================
