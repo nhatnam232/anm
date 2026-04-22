@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Calendar, Film, Flame, Heart, ShieldAlert, Star, Tv, X } from 'lucide-react'
+import { ArrowRight, Calendar, Film, Flame, Heart, Languages, Loader2, ShieldAlert, Star, Tv, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLangContext } from '@/providers/LangProvider'
 import { localizeStatus } from '@/lib/formatters'
+import { useManualTranslation } from '@/hooks/useManualTranslation'
+import { MarkdownText } from '@/lib/markdown'
 
 export type AnimePreview = {
   id: number
@@ -36,6 +38,7 @@ type Props = {
 export default function AnimePreviewModal({ anime, open, onClose }: Props) {
   const { lang } = useLangContext()
   const navigate = useNavigate()
+  const synopsisTr = useManualTranslation(anime?.synopsis ?? '', lang)
 
   // Lock body scroll while modal is open + ESC to close.
   useEffect(() => {
@@ -238,11 +241,56 @@ export default function AnimePreviewModal({ anime, open, onClose }: Props) {
                   </div>
                 )}
 
-                {/* Synopsis */}
+                {/* Synopsis with translate toggle */}
                 {anime.synopsis && (
-                  <p className="line-clamp-5 text-sm leading-relaxed text-gray-300">
-                    {anime.synopsis}
-                  </p>
+                  <div>
+                    {synopsisTr.canTranslate && (
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (synopsisTr.isTranslated) {
+                              synopsisTr.reset()
+                              return
+                            }
+                            void synopsisTr.translate()
+                          }}
+                          disabled={synopsisTr.loading}
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[11px] text-primary transition-colors hover:bg-primary/20 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {synopsisTr.loading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Languages className="h-3 w-3" />
+                          )}
+                          {synopsisTr.isTranslated
+                            ? lang === 'vi'
+                              ? 'Xem bản gốc'
+                              : 'Show original'
+                            : synopsisTr.loading
+                              ? lang === 'vi'
+                                ? 'Đang dịch...'
+                                : 'Translating...'
+                              : lang === 'vi'
+                                ? 'Dịch sang tiếng Việt'
+                                : 'Translate to Vietnamese'}
+                        </button>
+                        {synopsisTr.isTranslated && (
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">
+                            {lang === 'vi' ? 'Bản dịch tiếng Việt' : 'Vietnamese'}
+                          </span>
+                        )}
+                        {synopsisTr.unavailable && !synopsisTr.isTranslated && (
+                          <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] text-amber-200">
+                            {lang === 'vi' ? 'Tạm thời chưa dịch được' : 'Translation unavailable'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <MarkdownText className="line-clamp-5 text-sm leading-relaxed text-gray-300">
+                      {synopsisTr.text || anime.synopsis}
+                    </MarkdownText>
+                  </div>
                 )}
               </div>
             </div>
