@@ -52,9 +52,9 @@ export default function Logo({ size = 32, showWordmark = true, className = '' }:
       {showWordmark && (
         <span className="flex items-baseline gap-1 font-extrabold tracking-tight">
           <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-            ANM
+            Anime
           </span>
-          <span className="text-white">WIKI</span>
+          <span className="text-white">Wiki</span>
         </span>
       )}
     </span>

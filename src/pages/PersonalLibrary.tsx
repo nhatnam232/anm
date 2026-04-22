@@ -506,7 +506,17 @@ export default function PersonalLibrary() {
       setEntries((data as LibraryEntry[]) ?? [])
     } catch (err: any) {
       console.error('[PersonalLibrary] load failed', err)
-      setError(lang === 'vi' ? 'Không thể tải thư viện. Vui lòng thử lại.' : 'Failed to load library. Please try again.')
+      // Friendly hint when the table doesn't exist yet (RLS-blocked or not migrated).
+      const code = err?.code as string | undefined
+      const friendly =
+        code === '42P01'
+          ? lang === 'vi'
+            ? 'Bảng user_library chưa tồn tại trên Supabase. Hãy mở Supabase → SQL Editor và chạy file supabase/setup_all.sql.'
+            : 'The user_library table is missing on Supabase. Open Supabase → SQL Editor and run supabase/setup_all.sql.'
+          : lang === 'vi'
+            ? `Không thể tải thư viện (${code ?? 'lỗi'}). ${err?.message ?? ''}`
+            : `Failed to load library (${code ?? 'error'}). ${err?.message ?? ''}`
+      setError(friendly)
     } finally {
       setLoading(false)
     }
