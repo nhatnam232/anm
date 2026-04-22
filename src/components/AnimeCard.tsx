@@ -74,6 +74,11 @@ export default function AnimeCard({ anime, onAuthRequired }: AnimeCardProps) {
           </div>
         )}
 
+        {/* AniList ID badge — handy for power users / debugging */}
+        <div className="absolute bottom-2 left-2 z-10 rounded-md border border-white/10 bg-black/55 px-1.5 py-0.5 font-mono text-[10px] text-gray-200 backdrop-blur-sm">
+          #{anime.id}
+        </div>
+
         <button
           onClick={toggleFavorite}
           disabled={like.busy}

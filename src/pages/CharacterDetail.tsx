@@ -6,6 +6,7 @@ import Layout from '@/components/Layout'
 import CommentSection from '@/components/CommentSection'
 import ReloadLink from '@/components/ReloadLink'
 import AnimeLoader from '@/components/AnimeLoader'
+import { MarkdownText } from '@/lib/markdown'
 import { fetchCharacterDetails } from '@/lib/api'
 import { useManualTranslation } from '@/hooks/useManualTranslation'
 import { useLangContext } from '@/providers/LangProvider'
@@ -169,9 +170,9 @@ export default function CharacterDetail() {
                   </span>
                 )}
               </div>
-              <p className="whitespace-pre-line leading-relaxed text-gray-300">
+              <MarkdownText className="whitespace-pre-line leading-relaxed text-gray-300">
                 {biography.text}
-              </p>
+              </MarkdownText>
             </div>
 
             <h2 className="mb-6 text-2xl font-bold text-white">{t.appearsIn}</h2>

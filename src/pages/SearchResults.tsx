@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { AlertCircle, Filter, Search, X } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AlertCircle, ArrowRight, Filter, Hash, Search, X } from 'lucide-react'
 import AnimeCard from '@/components/AnimeCard'
 import AnimeGridSkeleton from '@/components/AnimeGridSkeleton'
 import AuthModal from '@/components/AuthModal'
@@ -10,8 +10,18 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useLangContext } from '@/providers/LangProvider'
 
 export default function SearchResults() {
-  const { t } = useLangContext()
+  const { t, lang } = useLangContext()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [idLookup, setIdLookup] = useState('')
+
+  const handleIdLookup = (e: React.FormEvent) => {
+    e.preventDefault()
+    const n = Number(idLookup.trim())
+    if (Number.isFinite(n) && n > 0) {
+      navigate(`/anime/${n}`)
+    }
+  }
 
   const DEFAULT_SORTS = [
     { value: 'score', label: t.sortHighestScore },
@@ -272,6 +282,39 @@ export default function SearchResults() {
                     />
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                   </div>
+                </div>
+
+                {/* Direct lookup by AniList ID — power user shortcut */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-400">
+                    {lang === 'vi' ? 'Mở theo ID' : 'Open by ID'}
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={idLookup}
+                        onChange={(e) => setIdLookup(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleIdLookup(e as any)
+                        }}
+                        placeholder="21"
+                        className="w-full rounded-lg border border-gray-700 bg-background py-2 pl-9 pr-3 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                      <Hash className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleIdLookup}
+                      className="flex items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-white hover:bg-primary-hover"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {lang === 'vi' ? 'Đi thẳng tới /anime/<id>' : 'Jump to /anime/<id>'}
+                  </p>
                 </div>
 
                 <div>

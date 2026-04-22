@@ -15,6 +15,10 @@ export type Profile = {
   username: string | null
   display_name: string | null
   avatar_url: string | null
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null
+  birthday: string | null  // ISO date YYYY-MM-DD
+  spotify_url: string | null
+  bio: string | null
 }
 
 type AuthContextValue = {
@@ -40,6 +44,10 @@ type AuthContextValue = {
     username?: string | null
     display_name?: string | null
     avatar_url?: string | null
+    gender?: Profile['gender']
+    birthday?: string | null
+    spotify_url?: string | null
+    bio?: string | null
   }) => Promise<{ error?: string }>
   uploadAvatar: (file: File) => Promise<{ error?: string; url?: string }>
   signOut: () => Promise<void>
@@ -50,7 +58,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url')
+    .select('id, username, display_name, avatar_url, gender, birthday, spotify_url, bio')
     .eq('id', userId)
     .maybeSingle()
 
@@ -175,7 +183,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const updateProfile = useCallback(
-    async (updates: { username?: string | null; display_name?: string | null; avatar_url?: string | null }) => {
+    async (updates: {
+      username?: string | null
+      display_name?: string | null
+      avatar_url?: string | null
+      gender?: Profile['gender']
+      birthday?: string | null
+      spotify_url?: string | null
+      bio?: string | null
+    }) => {
       const currentUser = session?.user
       if (!currentUser) return { error: 'You need to sign in first.' }
 

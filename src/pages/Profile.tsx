@@ -15,6 +15,7 @@ import {
 import Layout from '@/components/Layout'
 import AuthModal from '@/components/AuthModal'
 import ReloadLink from '@/components/ReloadLink'
+import SpotifyEmbed from '@/components/SpotifyEmbed'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -48,6 +49,10 @@ export default function Profile() {
   const [authOpen, setAuthOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
+  const [gender, setGender] = useState<string>('')
+  const [birthday, setBirthday] = useState<string>('')
+  const [spotifyUrl, setSpotifyUrl] = useState('')
+  const [bio, setBio] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -90,6 +95,10 @@ export default function Profile() {
   useEffect(() => {
     setDisplayName(profile?.display_name || user?.user_metadata?.full_name || '')
     setUsername(profile?.username || '')
+    setGender(profile?.gender ?? '')
+    setBirthday(profile?.birthday ?? '')
+    setSpotifyUrl(profile?.spotify_url ?? '')
+    setBio(profile?.bio ?? '')
   }, [profile, user?.user_metadata?.full_name])
 
   const avatar = profile?.avatar_url || user?.user_metadata?.avatar_url || null
@@ -112,6 +121,10 @@ export default function Profile() {
     const res = await updateProfile({
       display_name: displayName.trim() || null,
       username: username.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_') || null,
+      gender: (gender as any) || null,
+      birthday: birthday || null,
+      spotify_url: spotifyUrl.trim() || null,
+      bio: bio.trim() || null,
     })
 
     setSaving(false)
@@ -340,6 +353,75 @@ export default function Profile() {
                   className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
                 />
                 <p className="mt-2 text-xs text-gray-500">{t.usernameHint}</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm text-gray-300">
+                    {lang === 'vi' ? 'Giới tính' : 'Gender'}
+                  </label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  >
+                    <option value="">{lang === 'vi' ? 'Không nói' : 'Prefer not to say'}</option>
+                    <option value="male">{lang === 'vi' ? 'Nam' : 'Male'}</option>
+                    <option value="female">{lang === 'vi' ? 'Nữ' : 'Female'}</option>
+                    <option value="other">{lang === 'vi' ? 'Khác' : 'Other'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm text-gray-300">
+                    {lang === 'vi' ? 'Ngày sinh' : 'Birthday'}
+                  </label>
+                  <input
+                    type="date"
+                    value={birthday}
+                    onChange={(e) => setBirthday(e.target.value)}
+                    className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  {lang === 'vi' ? 'Giới thiệu' : 'Bio'}
+                </label>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder={
+                    lang === 'vi'
+                      ? 'Giới thiệu vài dòng về bạn...'
+                      : 'A few words about you...'
+                  }
+                  className="w-full resize-none rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">{bio.length}/500</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-gray-300">
+                  {lang === 'vi' ? 'Spotify (URL bài hát/playlist)' : 'Spotify (track or playlist URL)'}
+                </label>
+                <input
+                  type="url"
+                  value={spotifyUrl}
+                  onChange={(e) => setSpotifyUrl(e.target.value)}
+                  placeholder="https://open.spotify.com/playlist/..."
+                  className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                />
+                {spotifyUrl && (
+                  <div className="mt-3">
+                    <SpotifyEmbed
+                      url={spotifyUrl}
+                      title={lang === 'vi' ? 'Xem trước' : 'Preview'}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

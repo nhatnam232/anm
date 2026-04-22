@@ -24,6 +24,7 @@ import Layout from '@/components/Layout'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import AnimeCard from '@/components/AnimeCard'
 import AnimeLoader from '@/components/AnimeLoader'
+import { MarkdownText } from '@/lib/markdown'
 import HeroArtwork from '@/components/HeroArtwork'
 import ReloadLink from '@/components/ReloadLink'
 import { fetchAnimeDetails } from '@/lib/api'
@@ -466,9 +467,9 @@ export default function AnimeDetail() {
                 )}
               </div>
               <div className="rounded-xl border border-gray-800 bg-card p-6">
-                <p className="whitespace-pre-line leading-relaxed text-gray-300">
+                <MarkdownText className="leading-relaxed text-gray-300">
                   {synopsisText.text || t.originalTextFallback}
-                </p>
+                </MarkdownText>
               </div>
             </section>
 
@@ -509,9 +510,9 @@ export default function AnimeDetail() {
                   )}
                 </div>
                 <div className="rounded-xl border border-gray-800 bg-card p-6">
-                  <p className="whitespace-pre-line leading-relaxed text-gray-300">
+                  <MarkdownText className="leading-relaxed text-gray-300">
                     {backgroundText.text}
-                  </p>
+                  </MarkdownText>
                 </div>
               </section>
             )}

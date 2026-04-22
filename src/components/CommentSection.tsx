@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, MessageSquare, Reply as ReplyIcon, Send, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ImagePlus, Loader2, MessageSquare, Reply as ReplyIcon, Send, Trash2, X } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
@@ -21,6 +21,7 @@ type CommentRecord = {
   entity_id: number
   parent_id: string | null
   body: string
+  image_url: string | null
   is_deleted: boolean
   created_at: string
 }
@@ -45,6 +46,20 @@ export default function CommentSection({ entityType, entityId }: Props) {
   const [authOpen, setAuthOpen] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [replyBody, setReplyBody] = useState('')
+  const [pendingImage, setPendingImage] = useState<File | null>(null)
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const onPickImage = (file: File | null) => {
+    if (pendingImagePreview) URL.revokeObjectURL(pendingImagePreview)
+    setPendingImage(file)
+    setPendingImagePreview(file ? URL.createObjectURL(file) : null)
+  }
+
+  // Cleanup object URL when component unmounts.
+  useEffect(() => () => {
+    if (pendingImagePreview) URL.revokeObjectURL(pendingImagePreview)
+  }, [pendingImagePreview])
 
   const formatWhen = (iso: string) => {
     const d = new Date(iso)
@@ -66,7 +81,7 @@ export default function CommentSection({ entityType, entityId }: Props) {
 
     const { data, error } = await supabase
       .from('comments')
-      .select('id, user_id, entity_type, entity_id, parent_id, body, is_deleted, created_at')
+      .select('id, user_id, entity_type, entity_id, parent_id, body, image_url, is_deleted, created_at')
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: true })
@@ -153,22 +168,46 @@ export default function CommentSection({ entityType, entityId }: Props) {
     return byParent
   }, [rows])
 
-  const submit = async (text: string, parent: string | null = null) => {
+  const submit = async (text: string, parent: string | null = null, attachImage = false) => {
     if (!user) {
       setAuthOpen(true)
       return
     }
 
     const trimmed = text.trim()
-    if (!trimmed) return
+    if (!trimmed && !(attachImage && pendingImage)) return
 
     setSubmitting(true)
+
+    let imageUrl: string | null = null
+    if (attachImage && pendingImage) {
+      const ext = pendingImage.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'png'
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const upload = await supabase.storage
+        .from('comment-images')
+        .upload(path, pendingImage, {
+          cacheControl: '3600',
+          contentType: pendingImage.type || `image/${ext}`,
+          upsert: false,
+        })
+      if (upload.error) {
+        setSubmitting(false)
+        toast.error(
+          lang === 'vi' ? 'Tải ảnh thất bại' : 'Image upload failed',
+          upload.error.message,
+        )
+        return
+      }
+      imageUrl = supabase.storage.from('comment-images').getPublicUrl(path).data.publicUrl
+    }
+
     const { error } = await supabase.from('comments').insert({
       user_id: user.id,
       entity_type: entityType,
       entity_id: entityId,
       parent_id: parent,
       body: trimmed.slice(0, 2000),
+      image_url: imageUrl,
     })
     setSubmitting(false)
 
@@ -186,6 +225,8 @@ export default function CommentSection({ entityType, entityId }: Props) {
       toast.success(lang === 'vi' ? 'Đã đăng phản hồi' : 'Reply posted')
     } else {
       setBody('')
+      onPickImage(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
       toast.success(lang === 'vi' ? 'Đã đăng bình luận' : 'Comment posted')
     }
     void load()
@@ -252,6 +293,21 @@ export default function CommentSection({ entityType, entityId }: Props) {
             <p className="mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed text-gray-100 sm:text-base">
               {node.body}
             </p>
+            {node.image_url && (
+              <a
+                href={node.image_url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="mt-2 inline-block overflow-hidden rounded-lg border border-gray-700"
+              >
+                <img
+                  src={node.image_url}
+                  alt="comment attachment"
+                  className="max-h-80 max-w-full object-contain"
+                  loading="lazy"
+                />
+              </a>
+            )}
             <div className="mt-2 flex items-center gap-4 text-sm opacity-80 transition-opacity duration-200 group-hover/comment:opacity-100">
               {user && (
                 <button
@@ -367,17 +423,60 @@ export default function CommentSection({ entityType, entityId }: Props) {
                   maxLength={2000}
                   className="w-full resize-none rounded-lg border border-gray-700 bg-background px-3 py-2.5 text-[15px] leading-relaxed text-white placeholder-gray-500 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-base"
                 />
-                <div className="mt-2 flex items-center justify-between">
-                  <span
-                    className={`text-xs transition-colors ${
-                      body.length > 1800 ? 'text-amber-400' : 'text-gray-500'
-                    }`}
-                  >
-                    {body.length}/2000
-                  </span>
+                {pendingImagePreview && (
+                  <div className="relative mt-2 inline-block">
+                    <img
+                      src={pendingImagePreview}
+                      alt="preview"
+                      className="max-h-40 rounded-lg border border-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onPickImage(null)}
+                      className="absolute -right-2 -top-2 rounded-full bg-black/80 p-1 text-gray-200 hover:text-white"
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs transition-colors ${
+                        body.length > 1800 ? 'text-amber-400' : 'text-gray-500'
+                      }`}
+                    >
+                      {body.length}/2000
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-700 px-2 py-1 text-xs text-gray-300 hover:border-primary hover:text-primary"
+                      title={lang === 'vi' ? 'Đính kèm ảnh' : 'Attach image'}
+                    >
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      {lang === 'vi' ? 'Ảnh' : 'Image'}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null
+                        if (file && file.size > 5 * 1024 * 1024) {
+                          toast.error(lang === 'vi' ? 'Ảnh tối đa 5MB' : 'Max image size is 5MB')
+                          e.target.value = ''
+                          return
+                        }
+                        onPickImage(file)
+                      }}
+                    />
+                  </div>
                   <button
-                    onClick={() => void submit(body)}
-                    disabled={submitting || !body.trim()}
+                    onClick={() => void submit(body, null, true)}
+                    disabled={submitting || (!body.trim() && !pendingImage)}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white transition-all hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {submitting ? (

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import Logo from './Logo'
 import AuthModal from './AuthModal'
+import LangSwitcher, { LangIcon } from './LangSwitcher'
 import ReloadLink from '@/components/ReloadLink'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
@@ -35,9 +36,9 @@ interface SuggestionItem {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LANGUAGE_OPTIONS: Array<{ value: Lang; flag: string }> = [
-  { value: 'vi', flag: '🇻🇳' },
-  { value: 'en', flag: '🇬🇧' },
+const LANGUAGE_OPTIONS: Array<{ value: Lang }> = [
+  { value: 'vi' },
+  { value: 'en' },
 ]
 
 // ─── Autocomplete Suggestion Popup ───────────────────────────────────────────
@@ -229,16 +230,12 @@ export default function Navbar() {
   }
 
   const renderLanguageButton = (compact = false) => (
-    <button
-      type="button"
+    <LangSwitcher
+      lang={lang}
+      label={currentLanguageLabel}
+      compact={compact}
       onClick={() => setLangModalOpen(true)}
-      title={currentLanguageLabel}
-      className="flex items-center gap-1.5 rounded-full border border-gray-700 bg-background/70 px-2.5 py-1.5 text-sm text-gray-200 transition-all hover:border-primary hover:text-white"
-    >
-      <span className="text-lg leading-none">{lang === 'vi' ? '🇻🇳' : '🇬🇧'}</span>
-      {!compact && <span className="hidden sm:inline text-xs">{currentLanguageLabel}</span>}
-      <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-    </button>
+    />
   )
 
   // ── Nav links config ──
@@ -567,7 +564,7 @@ export default function Navbar() {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <span className="text-3xl leading-none">{option.flag}</span>
+                      <LangIcon lang={option.value} size={36} />
                       <div>
                         <div className="font-semibold">{label}</div>
                         <div className="text-sm text-gray-400">
