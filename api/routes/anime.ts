@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { getAnimeDetails, getAnimeList, getFeaturedAnime } from '../lib/jikan.js'
+import { getAnimeDetails, getAnimeList, getFeaturedAnime } from '../lib/provider.js'
 
 type CacheItem = { data: any; expires: number; staleUntil: number }
 const store = new Map<string, CacheItem>()

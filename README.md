@@ -1,57 +1,39 @@
-# React + TypeScript + Vite
+# ANM WIKI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern anime wiki built with **React + TypeScript + Vite** on the frontend and a thin **Express** API on the backend, deployed on **Vercel** at <https://animewiki.vercel.app>.
 
-Currently, two official plugins are available:
+> Licensed under the [MIT License](./LICENSE).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## Expanding the ESLint configuration
+- ⚡ Vite + React 18 + TypeScript
+- 🎨 TailwindCSS
+- 🔐 Supabase (auth, profiles, library, comments)
+- 🐎 Hybrid data layer:
+  - **Primary**: [AniList GraphQL](https://anilist.gitbook.io/anilist-apiv2-docs/) — single round-trip, no aggressive rate limit
+  - **Fallback**: [Jikan REST](https://jikan.moe/) (MyAnimeList) when AniList is missing data or fails
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Why hybrid?
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+Jikan was the original source but has tight rate limits (~3 req/s) and no batch — fetching one anime detail page costs 4 separate REST calls. AniList exposes everything we need in **one GraphQL query** and tolerates higher throughput. We keep MAL IDs as the public route IDs (AniList exposes `idMal` on every entry) so URLs stay stable; if a MAL ID is missing on AniList we transparently fall back to Jikan.
+
+Toggle the behavior with an env flag:
+
+```bash
+USE_ANILIST=false   # disable AniList, force Jikan only
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Folder structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+See [FOLDER_STRUCTURE.md](./FOLDER_STRUCTURE.md).
 
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Local development
+
+```bash
+npm install
+npm run dev          # runs vite + nodemon concurrently
 ```
+
+## License
+
+[MIT](./LICENSE) © 2026 nhatnam232

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { getSeasonAnime } from '../lib/jikan.js'
+import { getSeasonAnime } from '../lib/provider.js'
 
 const store = new Map<string, { data: any; expires: number }>()
 

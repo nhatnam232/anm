@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { getStudioDetails } from '../lib/jikan.js'
+import { getStudioDetails } from '../lib/provider.js'
 
 const router = express.Router()
 

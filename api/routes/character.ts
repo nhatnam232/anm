@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { getCharacterDetails } from '../lib/jikan.js'
+import { getCharacterDetails } from '../lib/provider.js'
 
 const router = express.Router()
 

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express'
-import { getGenreOptions, searchAnime } from '../lib/jikan.js'
+import { getGenreOptions, searchAnime } from '../lib/provider.js'
 
 const router = express.Router()
 
