@@ -11,6 +11,7 @@
 
 import * as jikan from './jikan.js'
 import * as anilist from './anilist.js'
+import * as characterCache from './characterCache.js'
 
 const USE_ANILIST = String(process.env.USE_ANILIST ?? 'true').toLowerCase() !== 'false'
 
@@ -77,16 +78,28 @@ export const getGenreOptions: typeof jikan.getGenreOptions = () =>
   )
 
 export const getAnimeDetails: typeof jikan.getAnimeDetails = async (id) => {
-  if (!USE_ANILIST) return jikan.getAnimeDetails(id)
-  try {
-    const detail = await anilist.getAnimeDetails(id)
-    if (detail) return detail
-    // Not found on AniList → fall back
-    return jikan.getAnimeDetails(id)
-  } catch (err: any) {
-    console.warn('[provider] AniList getAnimeDetails failed, falling back to Jikan:', err?.message ?? err)
-    return jikan.getAnimeDetails(id)
+  let detail: any = null
+  if (USE_ANILIST) {
+    try {
+      detail = await anilist.getAnimeDetails(id)
+    } catch (err: any) {
+      console.warn(
+        '[provider] AniList getAnimeDetails failed, falling back to Jikan:',
+        err?.message ?? err,
+      )
+    }
   }
+  if (!detail) {
+    detail = await jikan.getAnimeDetails(id)
+  }
+
+  // Fire-and-forget: snapshot characters into Supabase so we can recover them
+  // later if MAL ever removes them. Failures are silent.
+  if (detail?.characters?.length) {
+    void characterCache.seedFromAnime(id, detail).catch(() => undefined)
+  }
+
+  return detail
 }
 
 /**
@@ -129,13 +142,33 @@ export const getCharacterDetails: typeof jikan.getCharacterDetails = async (id) 
     /* ignore */
   }
 
-  if (!nameHint) {
-    console.warn(`[provider] No name hint for character ${id}; cannot AniList-fallback`)
-    return null
+  if (nameHint) {
+    console.warn(`[provider] Falling back to AniList by name for character ${id} ("${nameHint}")`)
+    const fromAnilist = await anilist.searchCharacterByName(nameHint)
+    if (fromAnilist) return fromAnilist
   }
 
-  console.warn(`[provider] Falling back to AniList by name for character ${id} ("${nameHint}")`)
-  return anilist.searchCharacterByName(nameHint)
+  // Final resort: snapshot we cached when the user previously visited an
+  // anime that contained this character. May lack biography but at least the
+  // page renders with name + image + role.
+  const cached = await characterCache.getById(id)
+  if (cached) {
+    console.warn(`[provider] Serving character ${id} from Supabase cache snapshot`)
+    return {
+      id: cached.id,
+      name: cached.name,
+      name_kanji: cached.name_kanji ?? '',
+      nicknames: [],
+      image: cached.image ?? '',
+      favorites: cached.favorites ?? 0,
+      description:
+        cached.description ??
+        'No biography available — this character was removed from the upstream source.',
+      appears_in: Array.isArray(cached.appears_in) ? cached.appears_in : [],
+    }
+  }
+
+  return null
 }
 
 export const getStudioDetails = jikan.getStudioDetails
