@@ -3,6 +3,7 @@ import { Loader2, MessageSquare, Reply as ReplyIcon, Send, Trash2 } from 'lucide
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
+import { useToast } from '@/providers/ToastProvider'
 import AuthModal from './AuthModal'
 
 type EntityType = 'anime' | 'character'
@@ -35,7 +36,8 @@ type Props = {
 
 export default function CommentSection({ entityType, entityId }: Props) {
   const { user, profile } = useAuth()
-  const { t } = useLangContext()
+  const { t, lang } = useLangContext()
+  const toast = useToast()
   const [rows, setRows] = useState<CommentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
@@ -170,20 +172,40 @@ export default function CommentSection({ entityType, entityId }: Props) {
     })
     setSubmitting(false)
 
-    if (!error) {
-      if (parent) {
-        setReplyTo(null)
-        setReplyBody('')
-      } else {
-        setBody('')
-      }
-      void load()
+    if (error) {
+      toast.error(
+        lang === 'vi' ? 'Đăng bình luận thất bại' : 'Failed to post comment',
+        error.message,
+      )
+      return
     }
+
+    if (parent) {
+      setReplyTo(null)
+      setReplyBody('')
+      toast.success(lang === 'vi' ? 'Đã đăng phản hồi' : 'Reply posted')
+    } else {
+      setBody('')
+      toast.success(lang === 'vi' ? 'Đã đăng bình luận' : 'Comment posted')
+    }
+    void load()
   }
 
   const remove = async (id: string) => {
     if (!user) return
-    await supabase.from('comments').delete().eq('id', id).eq('user_id', user.id)
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+    if (error) {
+      toast.error(
+        lang === 'vi' ? 'Xóa bình luận thất bại' : 'Failed to delete comment',
+        error.message,
+      )
+      return
+    }
+    toast.info(lang === 'vi' ? 'Đã xóa bình luận' : 'Comment deleted')
     void load()
   }
 
@@ -217,7 +239,7 @@ export default function CommentSection({ entityType, entityId }: Props) {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-gray-400">
               <span className="font-semibold text-gray-100">{authorName}</span>
               {isOwn && (
                 <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
@@ -227,10 +249,10 @@ export default function CommentSection({ entityType, entityId }: Props) {
               <span aria-hidden>·</span>
               <span>{formatWhen(node.created_at)}</span>
             </div>
-            <p className="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-gray-100">
+            <p className="mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed text-gray-100 sm:text-base">
               {node.body}
             </p>
-            <div className="mt-2 flex items-center gap-4 text-xs opacity-70 transition-opacity duration-200 group-hover/comment:opacity-100">
+            <div className="mt-2 flex items-center gap-4 text-sm opacity-80 transition-opacity duration-200 group-hover/comment:opacity-100">
               {user && (
                 <button
                   onClick={() => {
@@ -269,7 +291,7 @@ export default function CommentSection({ entityType, entityId }: Props) {
                     placeholder={t.replyPlaceholder}
                     rows={2}
                     autoFocus={replyTo === node.id}
-                    className="flex-1 resize-none rounded-lg border border-gray-700 bg-background px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    className="flex-1 resize-none rounded-lg border border-gray-700 bg-background px-3 py-2.5 text-[15px] text-white placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   />
                   <button
                     onClick={() => void submit(replyBody, node.id)}
@@ -343,7 +365,7 @@ export default function CommentSection({ entityType, entityId }: Props) {
                   placeholder={t.commentPlaceholder}
                   rows={3}
                   maxLength={2000}
-                  className="w-full resize-none rounded-lg border border-gray-700 bg-background px-3 py-2 text-sm text-white placeholder-gray-500 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full resize-none rounded-lg border border-gray-700 bg-background px-3 py-2.5 text-[15px] leading-relaxed text-white placeholder-gray-500 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:text-base"
                 />
                 <div className="mt-2 flex items-center justify-between">
                   <span

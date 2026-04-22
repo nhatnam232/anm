@@ -16,10 +16,12 @@ import BrowsePage from '@/pages/BrowsePage'
 import TosModal from '@/components/TosModal'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { LangProvider } from '@/providers/LangProvider'
+import { ToastProvider } from '@/providers/ToastProvider'
 
 export default function App() {
   return (
     <LangProvider>
+      <ToastProvider>
       <AuthProvider>
         <Router>
           <TosModal />
@@ -41,6 +43,7 @@ export default function App() {
           </Routes>
         </Router>
       </AuthProvider>
+      </ToastProvider>
     </LangProvider>
   )
 }

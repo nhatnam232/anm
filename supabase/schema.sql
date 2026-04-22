@@ -212,5 +212,5 @@ create policy "avatars_delete_own"
 --   * enable "Email" (default)
 --   * enable "Google" and paste the Client ID + Client Secret
 -- Redirect URL for Google: https://<project>.supabase.co/auth/v1/callback
--- Site URL: https://anmwiki.vercel.app   (add localhost:5173 for dev)
+-- Site URL: https://animewiki.vercel.app   (add localhost:5173 for dev)
 -- ============================================================

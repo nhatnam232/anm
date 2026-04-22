@@ -29,6 +29,7 @@ import { fetchAnimeDetails } from '@/lib/api'
 import { useAnimeLike } from '@/hooks/useAnimeLike'
 import { useManualTranslation } from '@/hooks/useManualTranslation'
 import CommentSection from '@/components/CommentSection'
+import AddToLibraryButton from '@/components/AddToLibraryButton'
 import AuthModal from '@/components/AuthModal'
 import { useLangContext } from '@/providers/LangProvider'
 import { cleanDuration, cleanEpisodeCount, localizeGenre, localizeStatus, orUnknown } from '@/lib/formatters'
@@ -244,6 +245,14 @@ export default function AnimeDetail() {
                     <span className="ml-1 text-xs opacity-80">• {like.count}</span>
                   )}
                 </button>
+
+                <AddToLibraryButton
+                  animeId={anime.id}
+                  animeTitle={anime.title}
+                  animeCover={anime.cover_image}
+                  animeEpisodes={anime.episodes ?? null}
+                  onAuthRequired={() => setAuthOpen(true)}
+                />
               </div>
             </div>
 

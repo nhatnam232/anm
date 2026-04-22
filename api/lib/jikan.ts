@@ -1,12 +1,16 @@
 const JIKAN_BASE_URL = 'https://api.jikan.moe/v4'
-const DEFAULT_CACHE_TTL_MS = 10 * 60 * 1000
-const DETAIL_CACHE_TTL_MS = 60 * 60 * 1000
-const GENRE_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+// Aggressive caching — Jikan ratelimits aggressively, and MAL data changes slowly.
+const DEFAULT_CACHE_TTL_MS = 30 * 60 * 1000 // 30 min fresh
+const DETAIL_CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 h fresh
+const GENRE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 1 week fresh
+// Stale window: serve cached value instantly while refreshing in background.
+const STALE_WHILE_REVALIDATE_MS = 24 * 60 * 60 * 1000
 
 type QueryValue = string | number | boolean | undefined | null
 
 type CacheEntry = {
   expiresAt: number
+  staleUntil: number
   value: unknown
 }
 
@@ -40,22 +44,47 @@ function buildUrl(path: string, params?: Record<string, QueryValue>) {
   return url.toString()
 }
 
+function startBackgroundRefresh<T>(
+  url: string,
+  path: string,
+  params: Record<string, QueryValue> | undefined,
+  ttlMs: number,
+) {
+  if (inflightRequests.has(url)) return
+  // Fire-and-forget refresh; errors are swallowed so stale data continues to serve.
+  const refresh = fetchJson<T>(path, params, ttlMs, 2, true).catch(() => undefined)
+  inflightRequests.set(url, refresh as Promise<unknown>)
+  refresh.finally(() => {
+    if (inflightRequests.get(url) === (refresh as Promise<unknown>)) {
+      inflightRequests.delete(url)
+    }
+  })
+}
+
 async function fetchJson<T>(
   path: string,
   params?: Record<string, QueryValue>,
   ttlMs = DEFAULT_CACHE_TTL_MS,
   retries = 3,
+  bypassCache = false,
 ): Promise<T> {
   const url = buildUrl(path, params)
   const now = Date.now()
   const cached = responseCache.get(url)
 
-  if (cached && cached.expiresAt > now) {
-    return cached.value as T
+  if (!bypassCache && cached) {
+    if (cached.expiresAt > now) {
+      return cached.value as T
+    }
+    // Stale-while-revalidate: return stale immediately and refresh in the background.
+    if (cached.staleUntil > now) {
+      startBackgroundRefresh<T>(url, path, params, ttlMs)
+      return cached.value as T
+    }
   }
 
   const inflight = inflightRequests.get(url)
-  if (inflight) {
+  if (inflight && !bypassCache) {
     return inflight as Promise<T>
   }
 
@@ -79,18 +108,22 @@ async function fetchJson<T>(
 
         await sleep(delayMs)
         inflightRequests.delete(url)
-        return fetchJson<T>(path, params, ttlMs, retries - 1)
+        return fetchJson<T>(path, params, ttlMs, retries - 1, bypassCache)
       }
     }
 
     if (!response.ok) {
+      // On upstream failure, keep serving stale if available rather than surfacing a 5xx.
+      if (cached?.value) return cached.value as T
       const message = await response.text()
       throw new Error(message || `Upstream request failed with ${response.status}`)
     }
 
     const json = (await response.json()) as T
+    const freshUntil = Date.now() + ttlMs
     responseCache.set(url, {
-      expiresAt: Date.now() + ttlMs,
+      expiresAt: freshUntil,
+      staleUntil: freshUntil + STALE_WHILE_REVALIDATE_MS,
       value: json,
     })
 

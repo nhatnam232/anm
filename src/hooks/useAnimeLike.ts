@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
+import { useLangContext } from '@/providers/LangProvider'
+import { useToast } from '@/providers/ToastProvider'
 import { useFavoritesStore, type AnimeFavorite } from '@/store/useFavoritesStore'
 
 export type LikableAnime = AnimeFavorite
@@ -14,6 +16,8 @@ export type LikableAnime = AnimeFavorite
  */
 export function useAnimeLike(anime: LikableAnime | null | undefined) {
   const { user } = useAuth()
+  const { lang } = useLangContext()
+  const toast = useToast()
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
   const [serverLiked, setServerLiked] = useState<boolean | null>(null)
   const [count, setCount] = useState<number | null>(null)
@@ -82,8 +86,19 @@ export function useAnimeLike(anime: LikableAnime | null | undefined) {
   const toggle = async () => {
     if (!anime) return
     if (!user) {
-      if (isFavorite(anime.id)) removeFavorite(anime.id)
-      else addFavorite(anime)
+      if (isFavorite(anime.id)) {
+        removeFavorite(anime.id)
+        toast.info(
+          lang === 'vi' ? 'Đã bỏ yêu thích' : 'Removed from favorites',
+          anime.title,
+        )
+      } else {
+        addFavorite(anime)
+        toast.success(
+          lang === 'vi' ? 'Đã lưu vào yêu thích' : 'Saved to favorites',
+          anime.title,
+        )
+      }
       return
     }
     if (busy) return
@@ -95,9 +110,18 @@ export function useAnimeLike(anime: LikableAnime | null | undefined) {
           .delete()
           .eq('user_id', user.id)
           .eq('anime_id', anime.id)
-        if (!error) {
+        if (error) {
+          toast.error(
+            lang === 'vi' ? 'Không thể bỏ yêu thích' : 'Could not remove favorite',
+            error.message,
+          )
+        } else {
           setServerLiked(false)
           setCount((c) => (typeof c === 'number' ? Math.max(0, c - 1) : c))
+          toast.info(
+            lang === 'vi' ? 'Đã bỏ yêu thích' : 'Removed from favorites',
+            anime.title,
+          )
         }
       } else {
         const { error } = await supabase.from('favorites').insert({
@@ -106,9 +130,18 @@ export function useAnimeLike(anime: LikableAnime | null | undefined) {
           anime_title: anime.title,
           anime_cover: anime.cover_image,
         })
-        if (!error) {
+        if (error) {
+          toast.error(
+            lang === 'vi' ? 'Không thể lưu yêu thích' : 'Could not save favorite',
+            error.message,
+          )
+        } else {
           setServerLiked(true)
           setCount((c) => (typeof c === 'number' ? c + 1 : c))
+          toast.success(
+            lang === 'vi' ? 'Đã lưu vào yêu thích' : 'Saved to favorites',
+            anime.title,
+          )
         }
       }
     } finally {

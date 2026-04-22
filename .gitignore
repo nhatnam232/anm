@@ -33,3 +33,7 @@ dist-ssr
 .claude/
 .vercel/
 .trae/
+
+# Local helper scripts
+push.ps1
+find-and-replace.ps1

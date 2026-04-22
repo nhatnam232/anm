@@ -1,16 +1,41 @@
 import express, { Request, Response } from 'express'
 import { getAnimeDetails, getAnimeList, getFeaturedAnime } from '../lib/jikan.js'
 
-const store = new Map<string, { data: any; expires: number }>()
+type CacheItem = { data: any; expires: number; staleUntil: number }
+const store = new Map<string, CacheItem>()
+// How long a stale entry is still OK to serve while we refresh in the background.
+const STALE_SECONDS = 24 * 60 * 60
 
-function getCache(key: string) {
+function getCache(key: string): { data: any; stale: boolean } | null {
   const item = store.get(key)
-  if (!item || Date.now() > item.expires) return null
-  return item.data
+  if (!item) return null
+  const now = Date.now()
+  if (now < item.expires) return { data: item.data, stale: false }
+  if (now < item.staleUntil) return { data: item.data, stale: true }
+  return null
 }
 
 function setCache(key: string, data: any, ttlSeconds = 600) {
-  store.set(key, { data, expires: Date.now() + ttlSeconds * 1000 })
+  const now = Date.now()
+  store.set(key, {
+    data,
+    expires: now + ttlSeconds * 1000,
+    staleUntil: now + (ttlSeconds + STALE_SECONDS) * 1000,
+  })
+}
+
+const refreshing = new Set<string>()
+function refreshInBackground(key: string, ttlSeconds: number, loader: () => Promise<any>) {
+  if (refreshing.has(key)) return
+  refreshing.add(key)
+  loader()
+    .then((fresh) => {
+      if (fresh !== undefined && fresh !== null) setCache(key, fresh, ttlSeconds)
+    })
+    .catch(() => {
+      /* keep stale cache in place */
+    })
+    .finally(() => refreshing.delete(key))
 }
 
 const router = express.Router()
@@ -23,24 +48,27 @@ router.get('/', async (req: Request, res: Response) => {
     const maxScore = Number.parseFloat(req.query.max_score as string)
 
     const key = `anime:${JSON.stringify(req.query)}`
+    const load = () =>
+      getAnimeList({
+        page,
+        limit,
+        genre: req.query.genre as string,
+        status: req.query.status as string,
+        sort: req.query.sort as string,
+        min_score: Number.isNaN(minScore) ? undefined : minScore,
+        max_score: Number.isNaN(maxScore) ? undefined : maxScore,
+      })
+
     const cached = getCache(key)
     if (cached) {
-      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400')
-      return res.json({ success: true, ...cached })
+      if (cached.stale) refreshInBackground(key, 1800, load)
+      res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400')
+      return res.json({ success: true, ...cached.data })
     }
 
-    const result = await getAnimeList({
-      page,
-      limit,
-      genre: req.query.genre as string,
-      status: req.query.status as string,
-      sort: req.query.sort as string,
-      min_score: Number.isNaN(minScore) ? undefined : minScore,
-      max_score: Number.isNaN(maxScore) ? undefined : maxScore,
-    })
-
-    setCache(key, result, 600)
-    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400')
+    const result = await load()
+    setCache(key, result, 1800)
+    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400')
     return res.json({ success: true, ...result })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -49,15 +77,17 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/featured', async (_req: Request, res: Response) => {
   try {
+    const load = () => getFeaturedAnime(5)
     const cached = getCache('featured')
     if (cached) {
-      res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400')
-      return res.json({ success: true, data: cached })
+      if (cached.stale) refreshInBackground('featured', 3600, load)
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
+      return res.json({ success: true, data: cached.data })
     }
 
-    const data = await getFeaturedAnime(5)
-    setCache('featured', data, 1800)
-    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400')
+    const data = await load()
+    setCache('featured', data, 3600)
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     return res.json({ success: true, data })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
@@ -72,20 +102,23 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Invalid anime id' })
     }
 
-    const cached = getCache(`anime:${id}`)
+    const key = `anime:${id}`
+    const load = () => getAnimeDetails(id)
+    const cached = getCache(key)
     if (cached) {
-      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=604800')
-      return res.json({ success: true, data: cached })
+      if (cached.stale) refreshInBackground(key, 21600, load)
+      res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=604800')
+      return res.json({ success: true, data: cached.data })
     }
 
-    const data = await getAnimeDetails(id)
+    const data = await load()
 
     if (!data) {
       return res.status(404).json({ success: false, error: 'Anime not found' })
     }
 
-    setCache(`anime:${id}`, data, 3600)
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=604800')
+    setCache(key, data, 21600)
+    res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=604800')
     return res.json({ success: true, data })
   } catch (error: any) {
     console.error(`[anime/:id] failed for ${req.params.id}:`, error?.message || error)
