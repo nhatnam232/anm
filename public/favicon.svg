@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="anmBg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="55%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="anmStroke" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f5f3ff"/>
+      <stop offset="100%" stop-color="#fce7f3"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#anmBg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1"/>
+  <path d="M14 46 L22 18 L30 18 L38 46 L31 46 L29.3 40 L22.7 40 L21 46 Z M24 34 L28 34 L26 26 Z" fill="url(#anmStroke)"/>
+  <path d="M42 46 L42 18 L48 18 L54 34 L54 18 L54 18 L54 46 L48 46 L42 30 Z" fill="url(#anmStroke)" fill-opacity="0.95"/>
+  <circle cx="50" cy="50" r="3" fill="#fde68a"/>
+</svg>

@@ -1,0 +1,28 @@
+{
+  "functions": {
+    "api/index.ts": {
+      "regions": ["hkg1"]
+    }
+  },
+  "headers": [
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=utf-8"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!sitemap.xml).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
