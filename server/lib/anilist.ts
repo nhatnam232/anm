@@ -1,13 +1,14 @@
 /**
- * AniList GraphQL adapter — fast primary source for anime data.
+ * AniList GraphQL adapter — sole upstream data source for ANM WIKI.
  *
- * Strategy:
- *   - We expose the SAME shape as `jikan.ts` so route handlers can transparently
- *     try AniList first and fall back to Jikan on failure (see `provider.ts`).
- *   - AniList exposes `idMal` for every entry, so the public IDs we hand to the
- *     frontend remain MAL IDs (compatible with existing routes/links).
- *   - Aggressive in-memory cache identical to jikan.ts so cold paths still beat
- *     network round-trips.
+ * Migration notes (replaces Jikan/MyAnimeList):
+ *   - Public IDs we hand to the frontend are now AniList IDs (anime,
+ *     character, studio). They are stable, GraphQL-only, and never 404 once
+ *     created.
+ *   - One GraphQL round-trip fetches anime + characters + recommendations +
+ *     relations + statistics, dramatically faster than the previous 4 REST
+ *     calls to Jikan.
+ *   - In-memory cache + stale-while-revalidate keeps cold requests fast.
  */
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co'
@@ -36,7 +37,6 @@ async function gql<T>(
   if (cached) {
     if (cached.expiresAt > now) return cached.value as T
     if (cached.staleUntil > now) {
-      // Background refresh
       if (!inflight.has(key)) {
         const refresh = gql<T>(query, variables, ttlMs, retries).catch(() => undefined)
         inflight.set(key, refresh as Promise<unknown>)
@@ -68,14 +68,27 @@ async function gql<T>(
       return gql<T>(query, variables, ttlMs, retries - 1)
     }
 
+    if (response.status === 404) {
+      const err = new Error('Resource not found') as Error & { status?: number }
+      err.status = 404
+      throw err
+    }
+
     if (!response.ok) {
       if (cached?.value) return cached.value as T
       const text = await response.text()
       throw new Error(text || `AniList request failed with ${response.status}`)
     }
 
-    const json = (await response.json()) as { data?: T; errors?: Array<{ message: string }> }
+    const json = (await response.json()) as { data?: T; errors?: Array<{ message: string; status?: number }> }
     if (json.errors?.length) {
+      // AniList returns 200 + errors[] when an entity isn't found
+      const notFound = json.errors.some((e) => /not.?found/i.test(e.message) || e.status === 404)
+      if (notFound) {
+        const err = new Error(json.errors[0].message) as Error & { status?: number }
+        err.status = 404
+        throw err
+      }
       if (cached?.value) return cached.value as T
       throw new Error(json.errors.map((e) => e.message).join('; '))
     }
@@ -99,7 +112,7 @@ async function gql<T>(
 }
 
 // ---------------------------------------------------------------------------
-// Mapping helpers — keep output shape identical to jikan.ts
+// Mapping helpers
 // ---------------------------------------------------------------------------
 
 const STATUS_MAP: Record<string, string> = {
@@ -134,12 +147,16 @@ function mapMedia(media: any) {
         : 'Unknown'
 
   return {
-    // Use MAL id as the public id so frontend routes stay stable
-    id: media.idMal ?? media.id,
-    anilist_id: media.id,
+    // Public ID is now the AniList media ID (stable, never 404 once created).
+    id: media.id,
+    mal_id: media.idMal ?? null, // kept for external link to MAL only
     title: pickTitle(media.title),
     title_jp: media.title?.native || '',
-    cover_image: media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '',
+    cover_image:
+      media.coverImage?.extraLarge ||
+      media.coverImage?.large ||
+      media.coverImage?.medium ||
+      '',
     banner_image: media.bannerImage || media.coverImage?.extraLarge || '',
     score,
     episodes: media.episodes ?? 0,
@@ -170,7 +187,7 @@ function mapPagination(payload: any, fallbackLimit: number) {
 }
 
 // ---------------------------------------------------------------------------
-// Public API — mirrors jikan.ts surface used by routes
+// Public API
 // ---------------------------------------------------------------------------
 
 const MEDIA_FRAGMENT = `
@@ -220,12 +237,7 @@ export async function getAnimeList(params: {
           ? 'NOT_YET_RELEASED'
           : undefined
 
-  const variables: Record<string, unknown> = {
-    page,
-    perPage: limit,
-    sort,
-    isAdult: false,
-  }
+  const variables: Record<string, unknown> = { page, perPage: limit, sort, isAdult: false }
   if (params.genre && params.genre !== 'All') variables.genre = params.genre
   if (status) variables.status = status
   if (typeof params.min_score === 'number') variables.minScore = Math.round(params.min_score * 10)
@@ -277,28 +289,59 @@ export async function searchAnime(params: {
   page?: number
   limit?: number
 }) {
-  return getAnimeList({
-    page: params.page,
-    limit: params.limit,
-    genre: params.genre,
-    status: params.status,
-    sort: params.sort,
-    min_score: params.min_score,
-    max_score: params.max_score,
-    // AniList query supports `search` directly — extend if needed
-    ...(params.q ? { } : {}),
-  })
+  const page = params.page ?? 1
+  const limit = Math.min(params.limit ?? 20, 50)
+
+  let sort: string[] = ['SCORE_DESC']
+  if (params.sort === 'popularity') sort = ['POPULARITY_DESC']
+  else if (params.sort === 'newest') sort = ['START_DATE_DESC']
+
+  const status =
+    params.status?.toLowerCase() === 'airing'
+      ? 'RELEASING'
+      : params.status?.toLowerCase() === 'finished' || params.status?.toLowerCase() === 'complete'
+        ? 'FINISHED'
+        : params.status?.toLowerCase() === 'upcoming'
+          ? 'NOT_YET_RELEASED'
+          : undefined
+
+  const variables: Record<string, unknown> = { page, perPage: limit, sort, isAdult: false }
+  if (params.q?.trim()) variables.search = params.q.trim()
+  if (params.genre && params.genre !== 'All') variables.genre = params.genre
+  if (status) variables.status = status
+  if (typeof params.min_score === 'number') variables.minScore = Math.round(params.min_score * 10)
+  if (typeof params.max_score === 'number') variables.maxScore = Math.round(params.max_score * 10)
+
+  const query = `
+    query ($page: Int, $perPage: Int, $sort: [MediaSort], $isAdult: Boolean,
+           $search: String, $genre: String, $status: MediaStatus,
+           $minScore: Int, $maxScore: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo { total currentPage lastPage hasNextPage perPage }
+        media(type: ANIME, sort: $sort, isAdult: $isAdult,
+              search: $search, genre: $genre, status: $status,
+              averageScore_greater: $minScore, averageScore_lesser: $maxScore) {
+          ${MEDIA_FRAGMENT}
+        }
+      }
+    }
+  `
+
+  const data = await gql<any>(query, variables, DEFAULT_CACHE_TTL_MS)
+  const page1 = data?.Page
+  return {
+    data: (page1?.media ?? []).map(mapMedia).filter(Boolean),
+    ...mapPagination(page1, limit),
+  }
 }
 
 /**
- * Detail by MAL id — uses one GraphQL query to fetch base + characters +
- * recommendations + relations + statistics. This is where AniList shines vs
- * Jikan (4 separate REST calls).
+ * Anime detail by AniList id (single round-trip).
  */
-export async function getAnimeDetails(malId: number) {
+export async function getAnimeDetails(id: number) {
   const query = `
-    query ($idMal: Int) {
-      Media(idMal: $idMal, type: ANIME) {
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
         ${MEDIA_FRAGMENT}
         duration
         synonyms
@@ -311,10 +354,10 @@ export async function getAnimeDetails(malId: number) {
         relations {
           edges {
             relationType(version: 2)
-            node { id idMal type title { romaji english } }
+            node { id idMal type title { romaji english } format }
           }
         }
-        characters(perPage: 18, sort: [ROLE, FAVOURITES_DESC]) {
+        characters(perPage: 24, sort: [ROLE, FAVOURITES_DESC]) {
           edges {
             role
             node {
@@ -335,7 +378,7 @@ export async function getAnimeDetails(malId: number) {
             node {
               mediaRecommendation {
                 id idMal
-                title { romaji english }
+                title { romaji english native }
                 coverImage { large extraLarge }
                 bannerImage
                 averageScore
@@ -349,20 +392,29 @@ export async function getAnimeDetails(malId: number) {
     }
   `
 
-  const data = await gql<any>(query, { idMal: malId }, DETAIL_CACHE_TTL_MS)
+  let data: any = null
+  try {
+    data = await gql<any>(query, { id }, DETAIL_CACHE_TTL_MS)
+  } catch (err: any) {
+    if (err?.status === 404) return null
+    throw err
+  }
   const media = data?.Media
   if (!media) return null
 
   const base = mapMedia(media)
   if (!base) return null
 
-  const characters = (media.characters?.edges ?? []).slice(0, 18).map((edge: any) => {
+  const characters = (media.characters?.edges ?? []).slice(0, 24).map((edge: any) => {
     const va = edge.voiceActors?.[0]
     return {
       id: edge.node?.id,
       name: edge.node?.name?.full,
       image: edge.node?.image?.large || edge.node?.image?.medium || '',
-      role: (edge.role ?? 'SUPPORTING').toString().toLowerCase().replace(/^./, (c: string) => c.toUpperCase()),
+      role: (edge.role ?? 'SUPPORTING')
+        .toString()
+        .toLowerCase()
+        .replace(/^./, (c: string) => c.toUpperCase()),
       favorites: edge.node?.favourites ?? 0,
       voice_actor: va
         ? {
@@ -376,17 +428,18 @@ export async function getAnimeDetails(malId: number) {
 
   const relations = (media.relations?.edges ?? []).map((edge: any) => ({
     relation: (edge.relationType || 'RELATED').toString().replace(/_/g, ' ').toLowerCase(),
-    id: edge.node?.idMal ?? edge.node?.id,
+    id: edge.node?.id,
     name: pickTitle(edge.node?.title),
-    type: edge.node?.type ?? '',
+    type: (edge.node?.type ?? '').toString().toLowerCase(),
+    format: edge.node?.format ?? null,
   }))
 
   const related_anime = (media.recommendations?.edges ?? [])
     .map((e: any) => e.node?.mediaRecommendation)
     .filter(Boolean)
-    .slice(0, 4)
+    .slice(0, 8)
     .map((m: any) => ({
-      id: m.idMal ?? m.id,
+      id: m.id,
       title: pickTitle(m.title),
       cover_image: m.coverImage?.extraLarge || m.coverImage?.large || '',
       banner_image: m.bannerImage || '',
@@ -442,11 +495,10 @@ export async function getAnimeDetails(malId: number) {
     scored_by: null,
     score: base.score,
     episodes: base.episodes,
-    trailer_url: media.trailer
-      ? media.trailer.site === 'youtube'
+    trailer_url:
+      media.trailer && media.trailer.site === 'youtube'
         ? `https://www.youtube.com/watch?v=${media.trailer.id}`
-        : null
-      : null,
+        : null,
     trailer_embed:
       media.trailer && media.trailer.site === 'youtube'
         ? `https://www.youtube.com/embed/${media.trailer.id}`
@@ -529,25 +581,12 @@ export async function getGenreOptions() {
 }
 
 /**
- * Character detail by MAL id. Strategy:
- *   1. Look up an anime that contains this character via AniList's
- *      `Character(id: $id)` — but AniList uses its own character ID, not MAL's.
- *      So we instead query `Character` with a fuzzy lookup by `search` if we
- *      know the name; otherwise we have to fall back.
- *
- * AniList does NOT expose `idMal` for characters, so the only safe way to map
- * a MAL character id is to *guess* via name. Therefore we just attempt a
- * single GraphQL call by name supplied at call-site; if it fails we return
- * null and let the provider fall back.
- *
- * In practice the provider tries Jikan first for characters (since names are
- * not always known), then this function as a last-resort by-name lookup.
+ * Character detail by AniList id — direct lookup, no fallback chain needed.
  */
-export async function searchCharacterByName(name: string) {
-  if (!name?.trim()) return null
+export async function getCharacterDetails(id: number) {
   const query = `
-    query ($search: String) {
-      Character(search: $search) {
+    query ($id: Int) {
+      Character(id: $id) {
         id
         name { full native alternative }
         image { large medium }
@@ -557,8 +596,8 @@ export async function searchCharacterByName(name: string) {
           edges {
             characterRole
             node {
-              id idMal
-              title { romaji english }
+              id idMal type
+              title { romaji english native }
               coverImage { large extraLarge }
             }
           }
@@ -566,21 +605,30 @@ export async function searchCharacterByName(name: string) {
       }
     }
   `
+  let data: any = null
   try {
-    const data = await gql<any>(query, { search: name }, DETAIL_CACHE_TTL_MS)
-    const c = data?.Character
-    if (!c) return null
-    return {
-      id: c.id,
-      name: c.name?.full || name,
-      name_kanji: c.name?.native || '',
-      nicknames: c.name?.alternative ?? [],
-      image: c.image?.large || c.image?.medium || '',
-      favorites: c.favourites ?? 0,
-      description: (c.description || '').replace(/<[^>]+>/g, '').trim() || 'Biography unavailable.',
-      appears_in: (c.media?.edges ?? []).slice(0, 12).map((edge: any) => ({
-        id: edge.node?.idMal ?? edge.node?.id,
-        title: edge.node?.title?.english || edge.node?.title?.romaji || 'Unknown Title',
+    data = await gql<any>(query, { id }, DETAIL_CACHE_TTL_MS)
+  } catch (err: any) {
+    if (err?.status === 404) return null
+    throw err
+  }
+  const c = data?.Character
+  if (!c) return null
+
+  return {
+    id: c.id,
+    name: c.name?.full || 'Unknown',
+    name_kanji: c.name?.native || '',
+    nicknames: c.name?.alternative ?? [],
+    image: c.image?.large || c.image?.medium || '',
+    favorites: c.favourites ?? 0,
+    description: (c.description || '').replace(/<[^>]+>/g, '').trim() || 'Biography unavailable.',
+    appears_in: (c.media?.edges ?? [])
+      .filter((edge: any) => edge.node?.type === 'ANIME')
+      .slice(0, 12)
+      .map((edge: any) => ({
+        id: edge.node?.id,
+        title: pickTitle(edge.node?.title),
         cover_image: edge.node?.coverImage?.extraLarge || edge.node?.coverImage?.large || '',
         role:
           edge.characterRole === 'MAIN'
@@ -589,8 +637,49 @@ export async function searchCharacterByName(name: string) {
               ? 'Supporting'
               : edge.characterRole || 'Unknown',
       })),
+  }
+}
+
+/**
+ * Studio detail by AniList id.
+ */
+export async function getStudioDetails(id: number) {
+  const query = `
+    query ($id: Int) {
+      Studio(id: $id) {
+        id
+        name
+        favourites
+        siteUrl
+        media(perPage: 24, sort: [POPULARITY_DESC]) {
+          nodes {
+            ${MEDIA_FRAGMENT}
+          }
+        }
+      }
     }
-  } catch {
-    return null
+  `
+  let data: any = null
+  try {
+    data = await gql<any>(query, { id }, DETAIL_CACHE_TTL_MS)
+  } catch (err: any) {
+    if (err?.status === 404) return null
+    throw err
+  }
+  const s = data?.Studio
+  if (!s) return null
+
+  const animeList = (s.media?.nodes ?? []).map(mapMedia).filter(Boolean)
+  return {
+    id: s.id,
+    name: s.name,
+    name_jp: '',
+    logo: '',
+    description: 'Studio profile from AniList.',
+    favorites: s.favourites ?? 0,
+    established: null,
+    count: animeList.length,
+    site_url: s.siteUrl,
+    anime: animeList,
   }
 }

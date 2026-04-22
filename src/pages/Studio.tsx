@@ -90,7 +90,7 @@ export default function Studio() {
         <Breadcrumbs
           crumbs={[
             { name: t.studios, path: '/search' },
-            { name: studio.name },
+            { name: `#${studio.id} • ${studio.name}` },
           ]}
         />
 

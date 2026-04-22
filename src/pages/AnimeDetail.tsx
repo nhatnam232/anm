@@ -205,7 +205,11 @@ export default function AnimeDetail() {
       />
 
       <div className="container relative z-10 mx-auto -mt-32 px-4 md:-mt-48">
-        <Breadcrumbs crumbs={[{ name: anime.title }]} />
+        <Breadcrumbs
+          crumbs={[
+            { name: `#${anime.id} • ${anime.title}` },
+          ]}
+        />
 
         <div className="flex flex-col gap-8 md:flex-row">
           <div className="w-full flex-shrink-0 md:w-64">

@@ -92,7 +92,7 @@ export default function CharacterDetail() {
   return (
     <Layout>
       <div className="container mx-auto max-w-5xl px-4 py-12">
-        <Breadcrumbs crumbs={[{ name: character.name }]} />
+        <Breadcrumbs crumbs={[{ name: `#${character.id} • ${character.name}` }]} />
 
         <div className="mt-8 flex flex-col gap-12 md:flex-row">
           <div className="flex w-full flex-col items-center md:w-1/3">
