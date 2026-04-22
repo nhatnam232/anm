@@ -16,6 +16,7 @@ import studioRoutes from './routes/studio.js'
 import searchRoutes from './routes/search.js'
 import translateRoutes from './routes/translate.js'
 import seasonRoutes from './routes/season.js'
+import scheduleRoutes from './routes/schedule.js'
 
 // load env
 dotenv.config()
@@ -36,6 +37,7 @@ app.use('/api/studio', studioRoutes)
 app.use('/api/search', searchRoutes)
 app.use('/api/translate', translateRoutes)
 app.use('/api/season', seasonRoutes)
+app.use('/api/schedule', scheduleRoutes)
 
 /**
  * health

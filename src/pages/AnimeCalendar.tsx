@@ -4,6 +4,7 @@ import Layout from '@/components/Layout'
 import ReloadLink from '@/components/ReloadLink'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { useLangContext } from '@/providers/LangProvider'
+import { fetchAnimeSchedule } from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -206,12 +207,17 @@ export default function AnimeCalendar() {
     setLoading(true)
     setError(null)
     try {
-      // TODO: Replace with real API call: const res = await fetchAnimeSchedule()
-      // Simulating API delay
-      await new Promise((resolve) => setTimeout(resolve, 600))
-      setSchedule(MOCK_SCHEDULE)
+      const res = await fetchAnimeSchedule()
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setSchedule(res.data as ScheduleAnime[])
+      } else {
+        // Empty week (rare) — fall back to mock so the grid is not blank.
+        setSchedule(MOCK_SCHEDULE)
+      }
     } catch (err) {
       console.error('[AnimeCalendar] Failed to load schedule', err)
+      // Soft-fail: still show mock data so the page is usable.
+      setSchedule(MOCK_SCHEDULE)
       setError(t.loadError)
     } finally {
       setLoading(false)

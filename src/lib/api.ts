@@ -57,6 +57,9 @@ export const fetchAnimeList = async (params: Record<string, any> = {}) =>
 export const fetchSeasonAnime = async (params: Record<string, any> = {}) =>
   fetchJson('/season', params)
 
+export const fetchAnimeSchedule = async (params: Record<string, any> = {}) =>
+  fetchJson('/schedule', params)
+
 export const fetchFeaturedAnime = async () => fetchJson('/anime/featured')
 
 export const fetchAnimeDetails = async (id: number) => fetchJson(`/anime/${id}`)

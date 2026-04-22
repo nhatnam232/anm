@@ -469,9 +469,11 @@ export default function Navbar() {
                     key={link.to}
                     to={link.to}
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-300 transition-all hover:bg-primary/10 hover:text-primary"
+                    className="flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium text-gray-200 transition-all hover:bg-primary/10 hover:text-primary"
                   >
-                    {link.icon}
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      {link.icon}
+                    </span>
                     {link.label}
                   </ReloadLink>
                 ))}
