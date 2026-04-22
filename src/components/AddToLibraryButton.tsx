@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { BookmarkPlus, Check, Loader2, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { BookmarkPlus, Check, ChevronDown, Loader2, Trash2 } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -22,11 +23,11 @@ const STATUS_OPTIONS: Array<{
   dot: string
   ring: string
 }> = [
-  { key: 'watching',      en: 'Watching',      vi: 'Đang xem', dot: 'bg-blue-400',   ring: 'ring-blue-400/40' },
-  { key: 'completed',     en: 'Completed',     vi: 'Đã xem',   dot: 'bg-green-400',  ring: 'ring-green-400/40' },
   { key: 'plan_to_watch', en: 'Plan to Watch', vi: 'Muốn xem', dot: 'bg-purple-400', ring: 'ring-purple-400/40' },
-  { key: 'on_hold',       en: 'On Hold',       vi: 'Tạm dừng', dot: 'bg-amber-400',  ring: 'ring-amber-400/40' },
-  { key: 'dropped',       en: 'Dropped',       vi: 'Đã bỏ',    dot: 'bg-red-400',    ring: 'ring-red-400/40' },
+  { key: 'watching',      en: 'Watching',      vi: 'Đang xem',  dot: 'bg-blue-400',   ring: 'ring-blue-400/40' },
+  { key: 'completed',     en: 'Completed',     vi: 'Đã xem',    dot: 'bg-green-400',  ring: 'ring-green-400/40' },
+  { key: 'on_hold',       en: 'On Hold',       vi: 'Tạm dừng',  dot: 'bg-amber-400',  ring: 'ring-amber-400/40' },
+  { key: 'dropped',       en: 'Dropped',       vi: 'Đã bỏ',     dot: 'bg-red-400',    ring: 'ring-red-400/40' },
 ]
 
 export default function AddToLibraryButton({
@@ -42,10 +43,13 @@ export default function AddToLibraryButton({
   const [loading, setLoading] = useState(true)
   const [busyKey, setBusyKey] = useState<WatchStatus | 'remove' | null>(null)
   const [currentStatus, setCurrentStatus] = useState<WatchStatus | null>(null)
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement | null>(null)
 
   const label = (opt: (typeof STATUS_OPTIONS)[number]) => (lang === 'vi' ? opt.vi : opt.en)
+  const activeOpt = currentStatus ? STATUS_OPTIONS.find((o) => o.key === currentStatus) : null
 
-  // Initial fetch
+  // Initial fetch.
   useEffect(() => {
     if (!user || !isSupabaseConfigured) {
       setLoading(false)
@@ -72,6 +76,17 @@ export default function AddToLibraryButton({
     }
   }, [animeId, user])
 
+  // Click-away.
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (!rootRef.current) return
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
   const setStatus = async (status: WatchStatus) => {
     if (!user) {
       onAuthRequired?.()
@@ -80,7 +95,7 @@ export default function AddToLibraryButton({
     if (!isSupabaseConfigured) return
     setBusyKey(status)
     const previous = currentStatus
-    setCurrentStatus(status) // optimistic
+    setCurrentStatus(status)
 
     const { error } = await supabase.from('user_library').upsert(
       {
@@ -95,9 +110,10 @@ export default function AddToLibraryButton({
       { onConflict: 'user_id,anime_id' },
     )
     setBusyKey(null)
+    setOpen(false)
 
     if (error) {
-      setCurrentStatus(previous) // rollback
+      setCurrentStatus(previous)
       console.error('[AddToLibrary] upsert failed', error)
       const friendly =
         lang === 'vi'
@@ -130,20 +146,24 @@ export default function AddToLibraryButton({
       .eq('user_id', user.id)
       .eq('anime_id', animeId)
     setBusyKey(null)
+    setOpen(false)
     if (error) {
       setCurrentStatus(previous)
-      toast.error(lang === 'vi' ? 'Không thể gỡ khỏi thư viện' : 'Could not remove from library', error.message)
+      toast.error(
+        lang === 'vi' ? 'Không thể gỡ khỏi thư viện' : 'Could not remove from library',
+        error.message,
+      )
       return
     }
     toast.info(lang === 'vi' ? 'Đã gỡ khỏi thư viện' : 'Removed from library', animeTitle)
   }
 
-  // Not signed in → single CTA button
+  // Not signed in → big CTA.
   if (!user) {
     return (
       <button
         onClick={() => onAuthRequired?.()}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-700 bg-background py-2 text-sm font-medium text-gray-100 transition-all hover:border-primary hover:bg-primary/10 hover:text-primary"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:shadow-emerald-500/50"
       >
         <BookmarkPlus className="h-4 w-4" />
         {lang === 'vi' ? 'Thêm vào thư viện' : 'Add to Library'}
@@ -153,55 +173,105 @@ export default function AddToLibraryButton({
 
   if (loading) {
     return (
-      <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-700 bg-background/40 py-2 text-sm text-gray-500">
+      <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-700 bg-background/40 py-2.5 text-sm text-gray-500">
         <Loader2 className="h-4 w-4 animate-spin" />
         {lang === 'vi' ? 'Đang tải...' : 'Loading...'}
       </div>
     )
   }
 
+  // Signed in: single CTA button → click opens dropdown panel below.
+  const isAdded = currentStatus !== null
   return (
-    <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
-        <BookmarkPlus className="h-3.5 w-3.5" />
-        {lang === 'vi' ? 'Thư viện' : 'Library'}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {STATUS_OPTIONS.map((opt) => {
-          const active = currentStatus === opt.key
-          const busy = busyKey === opt.key
-          return (
-            <button
-              key={opt.key}
-              onClick={() => void setStatus(opt.key)}
-              disabled={busy || busyKey !== null}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all disabled:opacity-50 ${
-                active
-                  ? `border-transparent bg-primary/20 text-primary ring-2 ${opt.ring}`
-                  : 'border-gray-700 bg-background/60 text-gray-300 hover:border-primary/50 hover:text-white'
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${opt.dot}`} />
-              {label(opt)}
-              {busy ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : active ? (
-                <Check className="h-3 w-3" />
-              ) : null}
-            </button>
-          )
-        })}
-        {currentStatus && (
-          <button
-            onClick={() => void removeFromLibrary()}
-            disabled={busyKey !== null}
-            className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-            title={lang === 'vi' ? 'Gỡ khỏi thư viện' : 'Remove from library'}
-          >
-            {busyKey === 'remove' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-          </button>
+    <div ref={rootRef} className="relative w-full">
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={() => setOpen((v) => !v)}
+        disabled={busyKey !== null}
+        className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all disabled:opacity-60 ${
+          isAdded
+            ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25'
+            : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50'
+        }`}
+      >
+        {busyKey ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : isAdded ? (
+          <Check className="h-4 w-4" />
+        ) : (
+          <BookmarkPlus className="h-4 w-4" />
         )}
-      </div>
+        <span>
+          {isAdded
+            ? `${lang === 'vi' ? 'Đã có trong thư viện' : 'In your library'} · ${activeOpt ? label(activeOpt) : ''}`
+            : lang === 'vi'
+              ? 'Thêm vào thư viện'
+              : 'Add to Library'}
+        </span>
+        <ChevronDown
+          className={`ml-auto h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </motion.button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/95 p-2 shadow-2xl backdrop-blur"
+          >
+            <p className="px-2 pb-1 pt-0.5 text-[11px] uppercase tracking-widest text-gray-500">
+              {lang === 'vi' ? 'Chọn trạng thái' : 'Pick a status'}
+            </p>
+            <ul className="space-y-0.5">
+              {STATUS_OPTIONS.map((opt) => {
+                const active = opt.key === currentStatus
+                const busy = busyKey === opt.key
+                return (
+                  <li key={opt.key}>
+                    <button
+                      onClick={() => void setStatus(opt.key)}
+                      disabled={busyKey !== null}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors disabled:opacity-50 ${
+                        active
+                          ? `bg-primary/15 text-primary ring-1 ${opt.ring}`
+                          : 'text-gray-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${opt.dot}`} />
+                      <span className="flex-1 text-left">{label(opt)}</span>
+                      {busy ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : active ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+            {isAdded && (
+              <>
+                <div className="my-1 h-px bg-white/10" />
+                <button
+                  onClick={() => void removeFromLibrary()}
+                  disabled={busyKey !== null}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/15 disabled:opacity-50"
+                >
+                  {busyKey === 'remove' ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>{lang === 'vi' ? 'Gỡ khỏi thư viện' : 'Remove from library'}</span>
+                </button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
