@@ -21,6 +21,7 @@ import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useFavoritesStore } from '@/store/useFavoritesStore'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { BadgeRow, computeAutoBadges, mergeBadges, type BadgeId } from '@/lib/badges'
 
 type ServerFavorite = {
   anime_id: number
@@ -242,6 +243,22 @@ export default function Profile() {
                 <h1 className="text-3xl font-bold text-white">
                   {profile?.display_name || user.user_metadata?.full_name || user.email}
                 </h1>
+                {(() => {
+                  const ids: BadgeId[] = mergeBadges(
+                    computeAutoBadges({
+                      createdAt: profile?.created_at ?? user.created_at,
+                      commentsCount: profile?.comments_count ?? 0,
+                      libraryCount: profile?.library_count ?? 0,
+                      reviewsCount: profile?.reviews_count ?? 0,
+                    }),
+                    profile?.badges ?? [],
+                  )
+                  return ids.length > 0 ? (
+                    <div className="mt-2">
+                      <BadgeRow ids={ids} lang={lang} max={5} size="sm" />
+                    </div>
+                  ) : null
+                })()}
                 <p className="mt-1 text-sm text-slate-300">{t.publicPresence}</p>
               </div>
             </div>

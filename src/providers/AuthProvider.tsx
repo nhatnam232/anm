@@ -16,9 +16,14 @@ export type Profile = {
   display_name: string | null
   avatar_url: string | null
   gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null
-  birthday: string | null  // ISO date YYYY-MM-DD
+  birthday: string | null
   spotify_url: string | null
   bio: string | null
+  created_at?: string | null
+  badges?: string[] | null
+  comments_count?: number | null
+  library_count?: number | null
+  reviews_count?: number | null
 }
 
 type AuthContextValue = {
@@ -58,7 +63,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, gender, birthday, spotify_url, bio')
+    .select(
+      'id, username, display_name, avatar_url, gender, birthday, spotify_url, bio, created_at, badges, comments_count, library_count, reviews_count',
+    )
     .eq('id', userId)
     .maybeSingle()
 

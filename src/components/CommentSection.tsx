@@ -21,6 +21,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
 import AuthModal from './AuthModal'
+import { BadgeRow, computeAutoBadges, mergeBadges, type BadgeId } from '@/lib/badges'
 
 type EntityType = 'anime' | 'character'
 
@@ -28,6 +29,11 @@ type AuthorProfile = {
   display_name: string | null
   avatar_url: string | null
   username: string | null
+  created_at?: string | null
+  badges?: string[] | null
+  comments_count?: number | null
+  library_count?: number | null
+  reviews_count?: number | null
 }
 
 type CommentRecord = {
@@ -124,16 +130,23 @@ export default function CommentSection({ entityType, entityId }: Props) {
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, username')
+        .select(
+          'id, display_name, avatar_url, username, created_at, badges, comments_count, library_count, reviews_count',
+        )
         .in('id', userIds)
       if (profiles) {
         authorMap = new Map(
-          profiles.map((p) => [
+          profiles.map((p: any) => [
             p.id as string,
             {
               display_name: p.display_name as string | null,
               avatar_url: p.avatar_url as string | null,
               username: p.username as string | null,
+              created_at: p.created_at as string | null,
+              badges: (p.badges as string[]) ?? [],
+              comments_count: p.comments_count ?? 0,
+              library_count: p.library_count ?? 0,
+              reviews_count: p.reviews_count ?? 0,
             },
           ]),
         )
@@ -649,6 +662,18 @@ function CommentItem({
                 {lang === 'vi' ? 'Bạn' : 'you'}
               </span>
             )}
+            {(() => {
+              const ids: BadgeId[] = mergeBadges(
+                computeAutoBadges({
+                  createdAt: node.author?.created_at,
+                  commentsCount: node.author?.comments_count ?? 0,
+                  libraryCount: node.author?.library_count ?? 0,
+                  reviewsCount: node.author?.reviews_count ?? 0,
+                }),
+                node.author?.badges ?? [],
+              )
+              return <BadgeRow ids={ids} lang={lang} max={2} size="xs" />
+            })()}
             <span className="ml-auto text-xs text-gray-500" suppressHydrationWarning>
               {formatWhen(node.created_at)}
             </span>
