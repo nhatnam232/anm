@@ -527,3 +527,70 @@ export async function getGenreOptions() {
     .map((name, idx) => ({ id: idx + 1, name }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
+
+/**
+ * Character detail by MAL id. Strategy:
+ *   1. Look up an anime that contains this character via AniList's
+ *      `Character(id: $id)` — but AniList uses its own character ID, not MAL's.
+ *      So we instead query `Character` with a fuzzy lookup by `search` if we
+ *      know the name; otherwise we have to fall back.
+ *
+ * AniList does NOT expose `idMal` for characters, so the only safe way to map
+ * a MAL character id is to *guess* via name. Therefore we just attempt a
+ * single GraphQL call by name supplied at call-site; if it fails we return
+ * null and let the provider fall back.
+ *
+ * In practice the provider tries Jikan first for characters (since names are
+ * not always known), then this function as a last-resort by-name lookup.
+ */
+export async function searchCharacterByName(name: string) {
+  if (!name?.trim()) return null
+  const query = `
+    query ($search: String) {
+      Character(search: $search) {
+        id
+        name { full native alternative }
+        image { large medium }
+        favourites
+        description(asHtml: false)
+        media(perPage: 12, sort: [POPULARITY_DESC]) {
+          edges {
+            characterRole
+            node {
+              id idMal
+              title { romaji english }
+              coverImage { large extraLarge }
+            }
+          }
+        }
+      }
+    }
+  `
+  try {
+    const data = await gql<any>(query, { search: name }, DETAIL_CACHE_TTL_MS)
+    const c = data?.Character
+    if (!c) return null
+    return {
+      id: c.id,
+      name: c.name?.full || name,
+      name_kanji: c.name?.native || '',
+      nicknames: c.name?.alternative ?? [],
+      image: c.image?.large || c.image?.medium || '',
+      favorites: c.favourites ?? 0,
+      description: (c.description || '').replace(/<[^>]+>/g, '').trim() || 'Biography unavailable.',
+      appears_in: (c.media?.edges ?? []).slice(0, 12).map((edge: any) => ({
+        id: edge.node?.idMal ?? edge.node?.id,
+        title: edge.node?.title?.english || edge.node?.title?.romaji || 'Unknown Title',
+        cover_image: edge.node?.coverImage?.extraLarge || edge.node?.coverImage?.large || '',
+        role:
+          edge.characterRole === 'MAIN'
+            ? 'Main'
+            : edge.characterRole === 'SUPPORTING'
+              ? 'Supporting'
+              : edge.characterRole || 'Unknown',
+      })),
+    }
+  } catch {
+    return null
+  }
+}
