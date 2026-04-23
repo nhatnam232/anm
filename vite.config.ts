@@ -36,9 +36,12 @@ export default defineConfig({
     // bugs to telemetry.
     drop: ['debugger'],
     pure: ['console.log', 'console.debug', 'console.info', 'console.table'],
-    // Mangle private property names (those starting with `_`) for smaller
-    // bundles + slightly harder reverse engineering.
-    mangleProps: /^_/,
+    // ⚠️ DO NOT enable `mangleProps` globally — it rewrites property names
+    // across ALL bundled code (including node_modules), which breaks React's
+    // internal reflection (`__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED`)
+    // that libraries like react-query use to read `ReactCurrentOwner` /
+    // `ReactCurrentDispatcher`. Symptom in production:
+    //   "Cannot read properties of undefined (reading 'ReactCurrentOwner')"
   },
   plugins: [
     react(),
