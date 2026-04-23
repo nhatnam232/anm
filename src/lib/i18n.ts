@@ -217,7 +217,81 @@ export type Translation = {
 
   footerTagline: string
   unofficialIndex: string
+
+  // ─── Theme ─────────────────────────────────────────────────────────────────
+  theme: string
+  themeLight: string
+  themeDark: string
+  themeSystem: string
+  switchToLightMode: string
+  switchToDarkMode: string
+
+  // ─── Navigation ────────────────────────────────────────────────────────────
+  exploreMenu: string
+  exploreMenuHint: string
+  scheduleNav: string
+  libraryNav: string
+  rankingNav: string
+  seasonNav: string
+  myLibrary: string
+
+  // ─── Notifications ─────────────────────────────────────────────────────────
+  notifications: string
+  noNotifications: string
+  notificationHint: string
+  notificationNewEpisode: (animeTitle: string, episode: number) => string
+  markAllRead: string
+  viewAll: string
+
+  // ─── Spotify mini player ───────────────────────────────────────────────────
+  spotifyMiniLabel: string
+  spotifyOpenFull: string
+  spotifyClose: string
+
+  // ─── Comments features ────────────────────────────────────────────────────
+  spoilerWarning: string
+  spoilerHide: string
+  spoilerShow: string
+  insertBold: string
+  insertItalic: string
+  insertSpoiler: string
+  formattingHint: string
+  noCommentsTitle: string
+  beTheFirstToComment: string
+  reportConfirm: string
+  reportSent: string
+  adminDelete: string
+  adminLabel: string
+  ownerLabel: string
+  modLabel: string
+
+  // ─── Profile cover ─────────────────────────────────────────────────────────
+  changeCover: string
+  removeCover: string
+  coverHint: string
+  coverUploaded: string
+
+  // ─── Library activity tabs ────────────────────────────────────────────────
+  activityWatching: string
+  activityCompleted: string
+  activityPlanToWatch: string
+  activityDropped: string
+  activityOnHold: string
+  activityFavorites: string
+  activityLibrary: string
+
+  // ─── Season ───────────────────────────────────────────────────────────────
+  seasonWinter: string
+  seasonSpring: string
+  seasonSummer: string
+  seasonFall: string
+
+  // Misc
+  backToProfile: string
+  loadMoreActivity: string
+  noActivityForStatus: (status: string) => string
 }
+
 
 const en: Translation = {
   searchPlaceholder: 'Search anime titles...',
@@ -437,9 +511,75 @@ const en: Translation = {
 
   footerTagline: 'Your curated anime companion for titles, synopses, scores, characters, and studios.',
   unofficialIndex: 'An unofficial anime index.',
+
+  theme: 'Theme',
+  themeLight: 'Light',
+  themeDark: 'Dark',
+  themeSystem: 'System',
+  switchToLightMode: 'Switch to light mode',
+  switchToDarkMode: 'Switch to dark mode',
+
+  exploreMenu: 'Explore',
+  exploreMenuHint: 'Quickly jump to seasonal, schedule, ranking, library',
+  scheduleNav: 'Schedule',
+  libraryNav: 'Library',
+  rankingNav: 'Ranking',
+  seasonNav: 'Seasonal',
+  myLibrary: 'My Library',
+
+  notifications: 'Notifications',
+  noNotifications: 'No notifications yet',
+  notificationHint: 'You will be notified when anime in your library has new episodes.',
+  notificationNewEpisode: (animeTitle: string, episode: number) =>
+    `New episode #${episode} of "${animeTitle}" is now available!`,
+  markAllRead: 'Mark all as read',
+  viewAll: 'View all',
+
+  spotifyMiniLabel: 'Now playing on Spotify',
+  spotifyOpenFull: 'Expand player',
+  spotifyClose: 'Close mini player',
+
+  spoilerWarning: 'Spoiler — click to reveal',
+  spoilerHide: 'Hide spoiler',
+  spoilerShow: 'Show spoiler',
+  insertBold: 'Bold',
+  insertItalic: 'Italic',
+  insertSpoiler: 'Spoiler',
+  formattingHint: 'Supports **bold**, *italic*, ~~strike~~, and ||spoiler|| tags',
+  noCommentsTitle: 'The discussion is just getting started',
+  beTheFirstToComment: 'Be the first to share your thoughts about this anime!',
+  reportConfirm: 'Report this comment to moderators?',
+  reportSent: 'Thanks — moderators will review this comment.',
+  adminDelete: 'Delete (admin)',
+  adminLabel: 'Admin',
+  ownerLabel: 'Owner',
+  modLabel: 'Mod',
+
+  changeCover: 'Change cover',
+  removeCover: 'Remove cover',
+  coverHint: 'Recommended size: 1500×500. Max 5 MB.',
+  coverUploaded: 'Cover photo updated.',
+
+  activityWatching: 'Watching',
+  activityCompleted: 'Completed',
+  activityPlanToWatch: 'Plan to Watch',
+  activityDropped: 'Dropped',
+  activityOnHold: 'On Hold',
+  activityFavorites: 'Favorites',
+  activityLibrary: 'Library',
+
+  seasonWinter: 'Winter',
+  seasonSpring: 'Spring',
+  seasonSummer: 'Summer',
+  seasonFall: 'Fall',
+
+  backToProfile: 'Back to profile',
+  loadMoreActivity: 'Load more',
+  noActivityForStatus: (status: string) => `No anime in "${status}" yet`,
 }
 
 const vi: Translation = {
+
   searchPlaceholder: 'Tìm kiếm tên anime...',
   home: 'Trang chủ',
   browse: 'Khám phá',
@@ -657,9 +797,75 @@ const vi: Translation = {
 
   footerTagline: 'Người bạn đồng hành anime để xem tiêu đề, tóm tắt, điểm số, nhân vật và studio trong một nơi.',
   unofficialIndex: 'Thư mục anime không chính thức.',
+
+  theme: 'Giao diện',
+  themeLight: 'Sáng',
+  themeDark: 'Tối',
+  themeSystem: 'Theo hệ thống',
+  switchToLightMode: 'Chuyển sang giao diện sáng',
+  switchToDarkMode: 'Chuyển sang giao diện tối',
+
+  exploreMenu: 'Khám phá',
+  exploreMenuHint: 'Truy cập nhanh: theo mùa, lịch chiếu, xếp hạng, thư viện',
+  scheduleNav: 'Lịch chiếu',
+  libraryNav: 'Thư viện',
+  rankingNav: 'Xếp hạng',
+  seasonNav: 'Theo mùa',
+  myLibrary: 'Thư viện của tôi',
+
+  notifications: 'Thông báo',
+  noNotifications: 'Chưa có thông báo nào',
+  notificationHint: 'Bạn sẽ được thông báo khi anime trong thư viện có tập mới.',
+  notificationNewEpisode: (animeTitle: string, episode: number) =>
+    `Anime "${animeTitle}" vừa có tập mới #${episode}!`,
+  markAllRead: 'Đánh dấu tất cả đã đọc',
+  viewAll: 'Xem tất cả',
+
+  spotifyMiniLabel: 'Đang phát trên Spotify',
+  spotifyOpenFull: 'Mở rộng trình phát',
+  spotifyClose: 'Đóng mini player',
+
+  spoilerWarning: 'Spoiler — bấm để hiển thị',
+  spoilerHide: 'Ẩn spoiler',
+  spoilerShow: 'Hiện spoiler',
+  insertBold: 'In đậm',
+  insertItalic: 'In nghiêng',
+  insertSpoiler: 'Spoiler',
+  formattingHint: 'Hỗ trợ **đậm**, *nghiêng*, ~~gạch~~ và ||spoiler||',
+  noCommentsTitle: 'Cuộc thảo luận đang chờ bạn',
+  beTheFirstToComment: 'Hãy là người đầu tiên chia sẻ cảm nhận về anime này!',
+  reportConfirm: 'Báo cáo bình luận này tới mod?',
+  reportSent: 'Cảm ơn — mod sẽ xem xét bình luận này.',
+  adminDelete: 'Xóa (admin)',
+  adminLabel: 'Sáng lập',
+  ownerLabel: 'Tác giả',
+  modLabel: 'Quản trị',
+
+  changeCover: 'Đổi ảnh bìa',
+  removeCover: 'Xóa ảnh bìa',
+  coverHint: 'Kích thước khuyên dùng: 1500×500. Tối đa 5 MB.',
+  coverUploaded: 'Đã cập nhật ảnh bìa.',
+
+  activityWatching: 'Đang xem',
+  activityCompleted: 'Đã xem',
+  activityPlanToWatch: 'Muốn xem',
+  activityDropped: 'Đã bỏ',
+  activityOnHold: 'Tạm dừng',
+  activityFavorites: 'Yêu thích',
+  activityLibrary: 'Thư viện',
+
+  seasonWinter: 'Đông',
+  seasonSpring: 'Xuân',
+  seasonSummer: 'Hè',
+  seasonFall: 'Thu',
+
+  backToProfile: 'Về trang hồ sơ',
+  loadMoreActivity: 'Xem thêm',
+  noActivityForStatus: (status: string) => `Chưa có anime nào trong "${status}"`,
 }
 
 export const translations: Record<Lang, Translation> = { en, vi }
+
 
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_STORAGE_KEY = 'anm-lang'

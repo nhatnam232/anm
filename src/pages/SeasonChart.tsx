@@ -5,6 +5,8 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import ReloadLink from '@/components/ReloadLink'
 import { fetchSeasonAnime } from '@/lib/api'
 import { useLangContext } from '@/providers/LangProvider'
+import { localizeStatus } from '@/lib/formatters'
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,13 +143,10 @@ function SeasonAnimeCard({ anime, lang, isCurrentSeason }: SeasonAnimeCardProps)
                   ? 'bg-amber-500/20 text-amber-300'
                   : 'bg-gray-700/50 text-gray-400'
             }`}>
-              {anime.status === 'Ongoing'
-                ? lang === 'vi' ? 'Đang chiếu' : 'Ongoing'
-                : anime.status === 'Upcoming'
-                  ? lang === 'vi' ? 'Sắp chiếu' : 'Upcoming'
-                  : lang === 'vi' ? 'Hoàn thành' : 'Finished'}
+              {localizeStatus(anime.status, lang)}
             </span>
           )}
+
           {anime.type && (
             <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-400">
               {anime.type}
@@ -324,8 +323,13 @@ export default function SeasonChart() {
           </div>
         </div>
 
-        {/* Season selector */}
-        <div className="mb-6">
+        {/*
+          Sticky season selector + quick jump pills.
+          `top-16` matches the nav height so the selector clings just below
+          the navbar when the user scrolls. Backdrop-blur keeps it readable
+          when dark cards scroll behind it.
+        */}
+        <div className="sticky top-16 z-30 -mx-4 mb-6 bg-background/85 px-4 py-3 backdrop-blur-md sm:rounded-3xl sm:mx-0 sm:px-3">
           <SeasonSelector
             season={season}
             year={year}
@@ -334,25 +338,26 @@ export default function SeasonChart() {
             lang={lang}
             isCurrentSeason={isCurrentSeason}
           />
+
+          {/* Quick season jump (kept inside the sticky bar) */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SEASONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setSeason(s); setYear(currentYear) }}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                  season === s && year === currentYear
+                    ? `${SEASON_BORDER[s]} ${SEASON_TEXT[s]} bg-white/5`
+                    : 'border-border text-text-muted hover:border-primary/50 hover:text-text'
+                }`}
+              >
+                <span>{SEASON_EMOJI[s]}</span>
+                {lang === 'vi' ? SEASON_VI[s] : s} {currentYear}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Quick season jump */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {SEASONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => { setSeason(s); setYear(currentYear) }}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
-                season === s && year === currentYear
-                  ? `${SEASON_BORDER[s]} ${SEASON_TEXT[s]} bg-white/5`
-                  : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
-              }`}
-            >
-              <span>{SEASON_EMOJI[s]}</span>
-              {lang === 'vi' ? SEASON_VI[s] : s} {currentYear}
-            </button>
-          ))}
-        </div>
 
         {/* Controls */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

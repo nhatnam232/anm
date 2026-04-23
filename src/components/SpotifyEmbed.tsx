@@ -11,7 +11,7 @@ import { Music2 } from 'lucide-react'
 
 const ALLOWED_TYPES = new Set(['track', 'album', 'playlist', 'show', 'episode', 'artist'])
 
-function toEmbedUrl(input: string | null | undefined): string | null {
+export function toEmbedUrl(input: string | null | undefined): string | null {
   if (!input) return null
   const trimmed = input.trim()
   if (!trimmed) return null

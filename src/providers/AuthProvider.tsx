@@ -15,6 +15,7 @@ export type Profile = {
   username: string | null
   display_name: string | null
   avatar_url: string | null
+  cover_url: string | null
   gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null
   birthday: string | null
   spotify_url: string | null
@@ -25,6 +26,7 @@ export type Profile = {
   library_count?: number | null
   reviews_count?: number | null
 }
+
 
 type AuthContextValue = {
   user: User | null
@@ -49,14 +51,18 @@ type AuthContextValue = {
     username?: string | null
     display_name?: string | null
     avatar_url?: string | null
+    cover_url?: string | null
     gender?: Profile['gender']
     birthday?: string | null
     spotify_url?: string | null
     bio?: string | null
   }) => Promise<{ error?: string }>
   uploadAvatar: (file: File) => Promise<{ error?: string; url?: string }>
+  uploadCover: (file: File) => Promise<{ error?: string; url?: string }>
+  removeCover: () => Promise<{ error?: string }>
   signOut: () => Promise<void>
 }
+
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
@@ -64,10 +70,11 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, username, display_name, avatar_url, gender, birthday, spotify_url, bio, created_at, badges, comments_count, library_count, reviews_count',
+      'id, username, display_name, avatar_url, cover_url, gender, birthday, spotify_url, bio, created_at, badges, comments_count, library_count, reviews_count',
     )
     .eq('id', userId)
     .maybeSingle()
+
 
   if (error) {
     console.warn('[auth] fetchProfile failed', error.message)
@@ -194,11 +201,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username?: string | null
       display_name?: string | null
       avatar_url?: string | null
+      cover_url?: string | null
       gender?: Profile['gender']
       birthday?: string | null
       spotify_url?: string | null
       bio?: string | null
     }) => {
+
       const currentUser = session?.user
       if (!currentUser) return { error: 'You need to sign in first.' }
 
@@ -263,10 +272,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [session?.user, updateProfile],
   )
 
+  /**
+   * Upload a banner / cover image (1500×500 recommended) to the `covers`
+   * bucket. Larger size limit than avatar (5 MB) since covers are wider.
+   */
+  const uploadCover = useCallback(
+    async (file: File) => {
+      const currentUser = session?.user
+      if (!currentUser) return { error: 'You need to sign in first.' }
+      if (!file.type.startsWith('image/')) return { error: 'Please choose an image file.' }
+      if (file.size > 5 * 1024 * 1024) return { error: 'Cover must be 5 MB or smaller.' }
+
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const safeExtension = extension.replace(/[^a-z0-9]/g, '') || 'jpg'
+      const filePath = `${currentUser.id}/cover-${Date.now()}.${safeExtension}`
+
+      const { error } = await supabase.storage.from('covers').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type || `image/${safeExtension}`,
+      })
+
+      if (error) return { error: error.message }
+
+      const { data } = supabase.storage.from('covers').getPublicUrl(filePath)
+      const url = data.publicUrl
+      const updateResult = await updateProfile({ cover_url: url })
+      if (updateResult.error) return updateResult
+
+      return { url }
+    },
+    [session?.user, updateProfile],
+  )
+
+  /** Clear the user's cover image (sets cover_url back to null). */
+  const removeCover = useCallback(async () => {
+    return updateProfile({ cover_url: null })
+  }, [updateProfile])
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setProfile(null)
   }, [])
+
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -281,6 +329,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile,
       updateProfile,
       uploadAvatar,
+      uploadCover,
+      removeCover,
       signOut,
     }),
     [
@@ -294,8 +344,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       updateProfile,
       uploadAvatar,
+      uploadCover,
+      removeCover,
     ],
   )
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

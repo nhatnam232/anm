@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Shield } from 'lucide-react'
 import ReloadLink from '@/components/ReloadLink'
 import { useLangContext } from '@/providers/LangProvider'
+import { isBotEnvironment } from '@/lib/bot'
 
 const TOS_ACCEPTED_KEY = 'anm-tos-accepted'
 
@@ -10,6 +11,10 @@ export default function TosModal() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    // Don't bother search-engine crawlers / unfurlers with the popup — let
+    // them see the actual content so previews render correctly.
+    if (isBotEnvironment()) return
+
     // Show modal only if user hasn't accepted yet
     const accepted = localStorage.getItem(TOS_ACCEPTED_KEY)
     if (!accepted) {
@@ -18,6 +23,7 @@ export default function TosModal() {
       return () => clearTimeout(timer)
     }
   }, [])
+
 
   const handleAccept = () => {
     localStorage.setItem(TOS_ACCEPTED_KEY, '1')

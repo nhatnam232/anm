@@ -34,7 +34,8 @@ import CommentSection from '@/components/CommentSection'
 import AddToLibraryButton from '@/components/AddToLibraryButton'
 import AuthModal from '@/components/AuthModal'
 import { useLangContext } from '@/providers/LangProvider'
-import { cleanDuration, cleanEpisodeCount, localizeGenre, localizeStatus, orUnknown } from '@/lib/formatters'
+import { cleanDuration, cleanEpisodeCount, localizeGenre, localizeSeason, localizeStatus, orUnknown } from '@/lib/formatters'
+
 
 const formatCount = (value?: number | null) => {
   if (typeof value !== 'number') return '—'
@@ -290,9 +291,11 @@ export default function AnimeDetail() {
               <div>
                 <span className="block text-sm text-gray-400">{t.season}</span>
                 <span className="flex items-center gap-2 text-gray-200">
-                  <Calendar className="h-4 w-4" /> {orUnknown(anime.season, lang)}
+                  <Calendar className="h-4 w-4" />
+                  {anime.season ? localizeSeason(anime.season, lang) : orUnknown(null, lang)}
                 </span>
               </div>
+
               {anime.broadcast && (
                 <div>
                   <span className="block text-sm text-gray-400">{t.broadcast}</span>

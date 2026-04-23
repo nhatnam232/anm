@@ -6,6 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="yRfIAHAD9fwynR62WNA07uv6yo1l67ubmiL_c0HRLEQ" />
     <title>Anime Wiki</title>
+    <!--
+      Theme bootstrap — runs synchronously BEFORE the React bundle so the page
+      never shows a wrong-theme flash for the first paint.
+    -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('anm-theme') || 'dark';
+          var resolved =
+            mode === 'system'
+              ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+              : mode;
+          var root = document.documentElement;
+          if (resolved === 'light') {
+            root.classList.add('light');
+          } else {
+            root.classList.add('dark');
+          }
+          root.dataset.theme = resolved;
+          root.style.colorScheme = resolved;
+        } catch (_) {}
+      })();
+    </script>
     <script type="module">
       if (import.meta.hot?.on) {
         import.meta.hot.on('vite:error', (error) => {

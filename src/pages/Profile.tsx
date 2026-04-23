@@ -1,27 +1,42 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BadgeCheck,
   BookOpen,
   Camera,
   Heart,
+  ImagePlus,
   Library,
   Loader2,
   Mail,
+  Music2,
+  PauseCircle,
+  PlayCircle,
   Save,
   Sparkles,
   Star,
+  Trash2,
   UserRound,
+  X,
 } from 'lucide-react'
 import Layout from '@/components/Layout'
 import AuthModal from '@/components/AuthModal'
 import ReloadLink from '@/components/ReloadLink'
 import SpotifyEmbed from '@/components/SpotifyEmbed'
+import UserAvatar from '@/components/UserAvatar'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
+import { useNowPlaying } from '@/providers/NowPlayingProvider'
 import { useFavoritesStore } from '@/store/useFavoritesStore'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { BadgeRow, computeAutoBadges, mergeBadges, type BadgeId } from '@/lib/badges'
+import {
+  BadgeRow,
+  computeAutoBadges,
+  getStaffRole,
+  mergeBadges,
+  type BadgeId,
+} from '@/lib/badges'
+import { localizeWatchStatus } from '@/lib/formatters'
 
 type ServerFavorite = {
   anime_id: number
@@ -34,19 +49,38 @@ type LibraryHistoryEntry = {
   anime_id: number
   anime_title: string
   anime_cover: string | null
-  status: string
+  status: 'watching' | 'completed' | 'plan_to_watch' | 'dropped' | 'on_hold'
   current_episode: number
   anime_episodes: number | null
   score: number | null
   updated_at: string
 }
 
+type ActivityTab =
+  | 'favorites'
+  | 'watching'
+  | 'completed'
+  | 'plan_to_watch'
+  | 'dropped'
+  | 'on_hold'
+
 export default function Profile() {
   const { t, lang } = useLangContext()
-  const { user, profile, loading, configured, updateProfile, uploadAvatar, refreshProfile } =
-    useAuth()
+  const {
+    user,
+    profile,
+    loading,
+    configured,
+    updateProfile,
+    uploadAvatar,
+    uploadCover,
+    removeCover,
+    refreshProfile,
+  } = useAuth()
   const toast = useToast()
+  const nowPlaying = useNowPlaying()
   const favorites = useFavoritesStore((state) => state.favorites)
+
   const [authOpen, setAuthOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
@@ -56,13 +90,16 @@ export default function Profile() {
   const [bio, setBio] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'favorites' | 'library'>('favorites')
+  const [activeTab, setActiveTab] = useState<ActivityTab>('favorites')
   const [serverFavorites, setServerFavorites] = useState<ServerFavorite[]>([])
   const [libraryHistory, setLibraryHistory] = useState<LibraryHistoryEntry[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Load history ──
   const loadHistory = useCallback(async () => {
     if (!user || !isSupabaseConfigured) return
     setHistoryLoading(true)
@@ -78,7 +115,7 @@ export default function Profile() {
         .select('anime_id, anime_title, anime_cover, status, current_episode, anime_episodes, score, updated_at')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
-        .limit(30),
+        .limit(120),
     ])
     setServerFavorites((favData as ServerFavorite[]) ?? [])
     setLibraryHistory((libData as LibraryHistoryEntry[]) ?? [])
@@ -102,17 +139,56 @@ export default function Profile() {
     setBio(profile?.bio ?? '')
   }, [profile, user?.user_metadata?.full_name])
 
+  // ── Computed ──
   const avatar = profile?.avatar_url || user?.user_metadata?.avatar_url || null
+  const cover = profile?.cover_url ?? null
   const profileFields = [
     Boolean(displayName.trim()),
     Boolean(username.trim()),
     Boolean(avatar),
     Boolean(user?.email),
+    Boolean(cover),       // count cover toward completion
+    Boolean(bio.trim()),  // count bio too — pushes users toward better profile
   ]
   const completion = Math.round(
     (profileFields.filter(Boolean).length / profileFields.length) * 100,
   )
 
+  const viewerBadges: BadgeId[] = profile
+    ? mergeBadges(
+        computeAutoBadges({
+          createdAt: profile.created_at ?? user?.created_at,
+          commentsCount: profile.comments_count ?? 0,
+          libraryCount: profile.library_count ?? 0,
+          reviewsCount: profile.reviews_count ?? 0,
+        }),
+        profile.badges,
+      )
+    : []
+  const staffRole = getStaffRole(profile)
+
+  // ── Activity tabs ──
+  const activityTabCounts = useMemo(() => {
+    const counts: Record<ActivityTab, number> = {
+      favorites: serverFavorites.length,
+      watching: 0,
+      completed: 0,
+      plan_to_watch: 0,
+      dropped: 0,
+      on_hold: 0,
+    }
+    libraryHistory.forEach((entry) => {
+      counts[entry.status as ActivityTab]++
+    })
+    return counts
+  }, [serverFavorites.length, libraryHistory])
+
+  const activityList = useMemo(() => {
+    if (activeTab === 'favorites') return null // handled separately (different shape)
+    return libraryHistory.filter((e) => e.status === activeTab)
+  }, [activeTab, libraryHistory])
+
+  // ── Handlers ──
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -142,27 +218,64 @@ export default function Profile() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     setUploading(true)
     setError(null)
     setMessage(null)
     const res = await uploadAvatar(file)
     setUploading(false)
-
     if (res.error) {
       setError(res.error)
-      toast.error(
-        lang === 'vi' ? 'Tải ảnh đại diện thất bại' : 'Avatar upload failed',
-        res.error,
-      )
+      toast.error(lang === 'vi' ? 'Tải ảnh đại diện thất bại' : 'Avatar upload failed', res.error)
       return
     }
-
     setMessage(t.avatarUpdated)
     toast.success(t.avatarUpdated)
     e.target.value = ''
   }
 
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingCover(true)
+    setError(null)
+    setMessage(null)
+    const res = await uploadCover(file)
+    setUploadingCover(false)
+    if (res.error) {
+      setError(res.error)
+      toast.error(lang === 'vi' ? 'Tải ảnh bìa thất bại' : 'Cover upload failed', res.error)
+      return
+    }
+    setMessage(t.coverUploaded)
+    toast.success(t.coverUploaded)
+    e.target.value = ''
+  }
+
+  const handleRemoveCover = async () => {
+    const res = await removeCover()
+    if (res.error) {
+      toast.error(lang === 'vi' ? 'Xóa ảnh bìa thất bại' : 'Remove cover failed', res.error)
+      return
+    }
+    toast.info(lang === 'vi' ? 'Đã xóa ảnh bìa' : 'Cover removed')
+  }
+
+  const handlePlaySpotify = () => {
+    if (!profile?.spotify_url) return
+    nowPlaying.setTrack({
+      url: profile.spotify_url,
+      title: profile.display_name ?? profile.username ?? undefined,
+      fromUser: profile.username ?? undefined,
+    })
+    toast.info(
+      lang === 'vi' ? 'Đang phát nhạc của bạn' : 'Now playing your track',
+      lang === 'vi' ? 'Sẽ tiếp tục phát khi đổi trang' : 'It will keep playing across pages',
+    )
+  }
+
+  const isCurrentTrack = nowPlaying.track?.url === profile?.spotify_url
+
+  // ── Loading / not-configured / not-signed-in branches ──
   if (!configured) {
     return (
       <Layout>
@@ -179,10 +292,10 @@ export default function Profile() {
     return (
       <Layout>
         <div className="container mx-auto max-w-4xl px-4 py-16">
-          <div className="animate-pulse rounded-3xl border border-gray-800 bg-card p-8">
-            <div className="mb-6 h-20 w-20 rounded-full bg-gray-800" />
-            <div className="mb-4 h-8 w-48 rounded bg-gray-800" />
-            <div className="h-28 rounded bg-gray-800" />
+          <div className="animate-pulse rounded-3xl border border-border bg-card p-8">
+            <div className="mb-6 h-40 w-full rounded-xl bg-surface" />
+            <div className="mb-4 h-8 w-48 rounded bg-surface" />
+            <div className="h-28 rounded bg-surface" />
           </div>
         </div>
       </Layout>
@@ -193,10 +306,10 @@ export default function Profile() {
     return (
       <Layout>
         <div className="container mx-auto max-w-3xl px-4 py-16">
-          <div className="rounded-3xl border border-gray-800 bg-card p-8 text-center">
+          <div className="rounded-3xl border border-border bg-card p-8 text-center">
             <UserRound className="mx-auto mb-4 h-12 w-12 text-primary" />
-            <h1 className="text-3xl font-bold text-white">{t.yourProfile}</h1>
-            <p className="mt-3 text-gray-400">{t.profileSubtitle}</p>
+            <h1 className="text-3xl font-bold text-text">{t.yourProfile}</h1>
+            <p className="mt-3 text-text-muted">{t.profileSubtitle}</p>
             <div className="mt-6 flex justify-center gap-3">
               <button
                 onClick={() => setAuthOpen(true)}
@@ -206,7 +319,7 @@ export default function Profile() {
               </button>
               <ReloadLink
                 to="/"
-                className="rounded-full border border-gray-700 px-5 py-2 text-sm text-gray-200 hover:border-primary"
+                className="rounded-full border border-border px-5 py-2 text-sm text-text hover:border-primary"
               >
                 {t.backHome}
               </ReloadLink>
@@ -218,169 +331,245 @@ export default function Profile() {
     )
   }
 
+  const tabConfig: Array<{
+    key: ActivityTab
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+    color: string
+  }> = [
+    { key: 'favorites',     label: t.activityFavorites,     icon: Heart,    color: 'text-red-400' },
+    { key: 'watching',      label: t.activityWatching,      icon: PlayCircle, color: 'text-blue-400' },
+    { key: 'completed',     label: t.activityCompleted,     icon: BadgeCheck, color: 'text-green-400' },
+    { key: 'plan_to_watch', label: t.activityPlanToWatch,   icon: BookOpen, color: 'text-purple-400' },
+    { key: 'on_hold',       label: t.activityOnHold,        icon: PauseCircle, color: 'text-amber-400' },
+    { key: 'dropped',       label: t.activityDropped,       icon: Trash2,   color: 'text-rose-400' },
+  ]
+
   return (
     <Layout>
-      <div className="container mx-auto max-w-6xl px-4 py-12">
-        <div className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(15,23,42,0.96)_40%,rgba(16,185,129,0.12))] p-6 shadow-2xl">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex items-center gap-4">
-              {avatar ? (
-                <img
-                  src={avatar}
-                  alt=""
-                  className="h-20 w-20 rounded-3xl border border-white/10 object-cover shadow-lg"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary text-3xl font-bold text-white shadow-lg">
-                  {(displayName || user.email || 'U')[0]?.toUpperCase()}
-                </div>
-              )}
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-sky-100">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {t.profileOverview}
-                </div>
-                <h1 className="text-3xl font-bold text-white">
-                  {profile?.display_name || user.user_metadata?.full_name || user.email}
-                </h1>
-                {(() => {
-                  const ids: BadgeId[] = mergeBadges(
-                    computeAutoBadges({
-                      createdAt: profile?.created_at ?? user.created_at,
-                      commentsCount: profile?.comments_count ?? 0,
-                      libraryCount: profile?.library_count ?? 0,
-                      reviewsCount: profile?.reviews_count ?? 0,
-                    }),
-                    profile?.badges ?? [],
-                  )
-                  return ids.length > 0 ? (
-                    <div className="mt-2">
-                      <BadgeRow ids={ids} lang={lang} max={5} size="sm" />
-                    </div>
-                  ) : null
-                })()}
-                <p className="mt-1 text-sm text-slate-300">{t.publicPresence}</p>
-              </div>
-            </div>
+      <div className="container mx-auto max-w-6xl px-4 py-8">
+        {/* ─── Cover banner + avatar ─── */}
+        <section className="relative mb-24 overflow-hidden rounded-3xl border border-border bg-card shadow-xl">
+          <div
+            className="relative h-44 w-full overflow-hidden sm:h-56 md:h-64"
+            style={
+              cover
+                ? { backgroundImage: `url(${cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                : undefined
+            }
+          >
+            {/* Fallback gradient when no cover */}
+            {!cover && (
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-[linear-gradient(135deg,rgba(124,58,237,0.55)_0%,rgba(236,72,153,0.45)_50%,rgba(14,165,233,0.55)_100%)]"
+              />
+            )}
+            {/* Subtle dark gradient at bottom for legible buttons */}
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent"
+            />
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t.favoriteLibrary}</div>
-                <div className="mt-1 text-2xl font-bold text-white">{favorites.length}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t.profileCompletion}</div>
-                <div className="mt-1 text-2xl font-bold text-white">{completion}%</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t.accountStatus}</div>
-                <div className="mt-1 inline-flex items-center gap-2 text-lg font-semibold text-emerald-300">
-                  <BadgeCheck className="h-5 w-5" />
-                  {t.accountStatusActive}
-                </div>
-              </div>
+            {/* Cover edit controls — only shown to the owner */}
+            <div className="absolute right-3 top-3 z-10 flex gap-2">
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploadingCover}
+                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/75 disabled:opacity-50"
+              >
+                {uploadingCover ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-3.5 w-3.5" />
+                )}
+                {t.changeCover}
+              </button>
+              {cover && (
+                <button
+                  type="button"
+                  onClick={handleRemoveCover}
+                  className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-rose-500/40"
+                  title={t.removeCover}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverChange}
+              />
             </div>
           </div>
-        </div>
 
-        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-          <aside className="surface-float rounded-3xl border border-gray-800 bg-card p-6">
-            <div className="flex flex-col items-center text-center">
-              {avatar ? (
-                <img
-                  src={avatar}
-                  alt=""
-                  className="h-28 w-28 rounded-full border border-gray-700 object-cover"
-                />
-              ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-primary text-4xl font-bold text-white">
-                  {(displayName || user.email || 'U')[0]?.toUpperCase()}
+          {/* Avatar overlapping the bottom edge of the cover */}
+          <div className="px-6 pb-6 pt-2 sm:px-8">
+            <div className="-mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-5">
+                <div className="relative inline-flex">
+                  <UserAvatar
+                    src={avatar}
+                    name={displayName || user.email}
+                    badges={viewerBadges}
+                    size={120}
+                    square
+                    className="border-4 border-card shadow-2xl"
+                  />
+                  <label className="absolute bottom-1 right-1 inline-flex cursor-pointer items-center justify-center rounded-full bg-primary p-2 text-white shadow-lg ring-2 ring-card transition-transform hover:scale-110">
+                    {uploading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Camera className="h-3.5 w-3.5" />
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                  </label>
                 </div>
-              )}
 
-              <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-gray-700 px-4 py-2 text-sm text-gray-200 transition-colors hover:border-primary">
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-                {t.changeAvatar}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-              </label>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold text-text sm:text-3xl">
+                    {profile?.display_name || user.user_metadata?.full_name || user.email}
+                  </h1>
+                  <p className="text-sm text-text-muted">@{profile?.username || 'user'}</p>
+                  {viewerBadges.length > 0 && (
+                    <div className="mt-2">
+                      <BadgeRow ids={viewerBadges} lang={lang} max={5} size="sm" />
+                    </div>
+                  )}
+                  {staffRole && (
+                    <p className="mt-1 text-xs text-text-muted">
+                      {lang === 'vi' ? 'Vai trò: ' : 'Role: '}
+                      <span className="font-semibold text-primary">
+                        {staffRole === 'owner'
+                          ? t.ownerLabel
+                          : staffRole === 'admin'
+                            ? t.adminLabel
+                            : t.modLabel}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
 
-              <p className="mt-3 text-xs text-gray-500">{t.recentAvatarTip}</p>
-
-              <h2 className="mt-5 text-2xl font-bold text-white">
-                {profile?.display_name || user.user_metadata?.full_name || user.email}
-              </h2>
-              <p className="mt-1 text-sm text-gray-400">@{profile?.username || 'user'}</p>
+              {/* Quick stats */}
+              <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
+                <div className="rounded-xl border border-border bg-surface px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-muted">{t.favoriteLibrary}</div>
+                  <div className="mt-0.5 text-lg font-bold text-text">{serverFavorites.length || favorites.length}</div>
+                </div>
+                <div className="rounded-xl border border-border bg-surface px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-muted">{t.profileCompletion}</div>
+                  <div className="mt-0.5 text-lg font-bold text-text">{completion}%</div>
+                </div>
+                <div className="rounded-xl border border-border bg-surface px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-muted">{t.accountStatus}</div>
+                  <div className="mt-0.5 inline-flex items-center gap-1 text-base font-semibold text-emerald-400">
+                    <BadgeCheck className="h-4 w-4" />
+                    {t.accountStatusActive}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-6 space-y-4 border-t border-gray-800 pt-6 text-sm">
+            <p className="mt-3 text-xs text-text-muted">{t.coverHint}</p>
+          </div>
+        </section>
+
+        {/* ─── Edit form + sidebar ─── */}
+        <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+          <aside className="surface-float space-y-4 rounded-3xl border border-border bg-card p-6">
+            <div className="space-y-4 text-sm">
               <div>
-                <div className="text-gray-500">{t.email}</div>
-                <div className="mt-1 flex items-center gap-2 text-gray-200">
+                <div className="text-text-muted">{t.email}</div>
+                <div className="mt-1 flex items-center gap-2 text-text">
                   <Mail className="h-4 w-4 text-primary" />
-                  <span>{user.email}</span>
+                  <span className="truncate">{user.email}</span>
                 </div>
               </div>
               <div>
-                <div className="text-gray-500">{t.joined}</div>
-                <div className="mt-1 text-gray-200">
+                <div className="text-text-muted">{t.joined}</div>
+                <div className="mt-1 text-text">
                   {user.created_at ? new Date(user.created_at).toLocaleDateString() : t.unknown}
                 </div>
               </div>
               <div>
-                <div className="text-gray-500">{t.favoriteLibrary}</div>
-                <div className="mt-1 flex items-center gap-2 text-gray-200">
-                  <Heart className="h-4 w-4 text-red-400" />
-                  <span>{favorites.length}</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-500">{t.memberIdentity}</div>
-                <div className="mt-1 text-gray-200">{profile?.username || t.unknown}</div>
+                <div className="text-text-muted">{t.memberIdentity}</div>
+                <div className="mt-1 text-text">{profile?.username || t.unknown}</div>
               </div>
             </div>
+
+            {/* Spotify quick-play card — hooks into the global mini-player */}
+            {profile?.spotify_url && (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-300">
+                  <Music2 className="h-3.5 w-3.5" />
+                  {t.spotifyMiniLabel}
+                </div>
+                <button
+                  type="button"
+                  onClick={isCurrentTrack ? nowPlaying.stop : handlePlaySpotify}
+                  className={`flex w-full items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
+                    isCurrentTrack
+                      ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                      : 'bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30'
+                  }`}
+                >
+                  {isCurrentTrack ? (
+                    <>
+                      <PauseCircle className="h-4 w-4" />
+                      {lang === 'vi' ? 'Dừng phát' : 'Stop playback'}
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="h-4 w-4" />
+                      {lang === 'vi' ? 'Phát qua mini player' : 'Play in mini-player'}
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </aside>
 
-          <section className="surface-float rounded-3xl border border-gray-800 bg-card p-6">
+          <section className="surface-float rounded-3xl border border-border bg-card p-6">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white">{t.editProfile}</h2>
-              <p className="mt-2 text-sm text-gray-400">{t.updateProfileHint}</p>
+              <h2 className="text-2xl font-bold text-text">{t.editProfile}</h2>
+              <p className="mt-2 text-sm text-text-muted">{t.updateProfileHint}</p>
             </div>
 
             <form onSubmit={handleSave} className="space-y-5">
               <div>
-                <label className="mb-2 block text-sm text-gray-300">{t.displayName}</label>
+                <label className="mb-2 block text-sm text-text">{t.displayName}</label>
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   maxLength={80}
-                  className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-300">{t.username}</label>
+                <label className="mb-2 block text-sm text-text">{t.username}</label>
                 <input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   maxLength={30}
-                  className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                 />
-                <p className="mt-2 text-xs text-gray-500">{t.usernameHint}</p>
+                <p className="mt-2 text-xs text-text-muted">{t.usernameHint}</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
+                  <label className="mb-2 block text-sm text-text">
                     {lang === 'vi' ? 'Giới tính' : 'Gender'}
                   </label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                   >
                     <option value="">{lang === 'vi' ? 'Không nói' : 'Prefer not to say'}</option>
                     <option value="male">{lang === 'vi' ? 'Nam' : 'Male'}</option>
@@ -389,20 +578,20 @@ export default function Profile() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm text-gray-300">
+                  <label className="mb-2 block text-sm text-text">
                     {lang === 'vi' ? 'Ngày sinh' : 'Birthday'}
                   </label>
                   <input
                     type="date"
                     value={birthday}
                     onChange={(e) => setBirthday(e.target.value)}
-                    className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
+                <label className="mb-2 block text-sm text-text">
                   {lang === 'vi' ? 'Giới thiệu' : 'Bio'}
                 </label>
                 <textarea
@@ -415,13 +604,13 @@ export default function Profile() {
                       ? 'Giới thiệu vài dòng về bạn...'
                       : 'A few words about you...'
                   }
-                  className="w-full resize-none rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-gray-500">{bio.length}/500</p>
+                <p className="mt-1 text-xs text-text-muted">{bio.length}/500</p>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-gray-300">
+                <label className="mb-2 block text-sm text-text">
                   {lang === 'vi' ? 'Spotify (URL bài hát/playlist)' : 'Spotify (track or playlist URL)'}
                 </label>
                 <input
@@ -429,7 +618,7 @@ export default function Profile() {
                   value={spotifyUrl}
                   onChange={(e) => setSpotifyUrl(e.target.value)}
                   placeholder="https://open.spotify.com/playlist/..."
-                  className="w-full rounded-xl border border-gray-700 bg-background px-4 py-3 text-sm text-white focus:border-primary focus:outline-none"
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
                 />
                 {spotifyUrl && (
                   <div className="mt-3">
@@ -442,20 +631,22 @@ export default function Profile() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-gray-800 bg-background/60 p-4">
-                  <div className="text-sm font-medium text-white">{t.profileCompletion}</div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-800">
+                <div className="rounded-2xl border border-border bg-background/60 p-4">
+                  <div className="text-sm font-medium text-text">{t.profileCompletion}</div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-sky-400 to-emerald-400"
                       style={{ width: `${completion}%` }}
                     />
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">{completion}%</p>
+                  <p className="mt-2 text-xs text-text-muted">{completion}%</p>
                 </div>
-                <div className="rounded-2xl border border-gray-800 bg-background/60 p-4">
-                  <div className="text-sm font-medium text-white">{t.favoriteLibrary}</div>
-                  <p className="mt-2 text-2xl font-bold text-white">{favorites.length}</p>
-                  <p className="mt-1 text-xs text-gray-500">{t.publicPresence}</p>
+                <div className="rounded-2xl border border-border bg-background/60 p-4">
+                  <div className="text-sm font-medium text-text">{t.favoriteLibrary}</div>
+                  <p className="mt-2 text-2xl font-bold text-text">
+                    {serverFavorites.length || favorites.length}
+                  </p>
+                  <p className="mt-1 text-xs text-text-muted">{t.publicPresence}</p>
                 </div>
               </div>
 
@@ -464,7 +655,6 @@ export default function Profile() {
                   {error}
                 </div>
               )}
-
               {message && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                   {message}
@@ -483,49 +673,44 @@ export default function Profile() {
           </section>
         </div>
 
-        {/* History: favorites & library */}
-        <section className="surface-float mt-8 rounded-3xl border border-gray-800 bg-card p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-white">
-                {lang === 'vi' ? 'Lịch sử hoạt động' : 'Activity history'}
-              </h2>
-              <p className="mt-1 text-sm text-gray-400">
-                {lang === 'vi'
-                  ? 'Các anime bạn đã yêu thích và trạng thái theo dõi gần đây'
-                  : 'Anime you favorited and recent library status changes'}
-              </p>
-            </div>
-            <div className="flex gap-1 rounded-xl border border-gray-800 bg-background p-1">
-              <button
-                onClick={() => setActiveTab('favorites')}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                  activeTab === 'favorites'
-                    ? 'bg-primary text-white shadow'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Heart className="h-4 w-4" />
-                {lang === 'vi' ? 'Yêu thích' : 'Favorites'}
-                <span className="rounded-full bg-white/15 px-1.5 text-xs">
-                  {serverFavorites.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('library')}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                  activeTab === 'library'
-                    ? 'bg-primary text-white shadow'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <Library className="h-4 w-4" />
-                {lang === 'vi' ? 'Thư viện' : 'Library'}
-                <span className="rounded-full bg-white/15 px-1.5 text-xs">
-                  {libraryHistory.length}
-                </span>
-              </button>
-            </div>
+        {/* ─── Activity history with status tabs ─── */}
+        <section className="surface-float mt-8 rounded-3xl border border-border bg-card p-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-text">
+              {lang === 'vi' ? 'Lịch sử hoạt động' : 'Activity history'}
+            </h2>
+            <p className="mt-1 text-sm text-text-muted">
+              {lang === 'vi'
+                ? 'Quản lý anime theo từng trạng thái xem'
+                : 'Browse your anime grouped by watch status'}
+            </p>
+          </div>
+
+          {/* Status tabs */}
+          <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-border bg-background p-1">
+            {tabConfig.map((tab) => {
+              const TabIcon = tab.icon
+              const count = activityTabCounts[tab.key]
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    activeTab === tab.key
+                      ? 'bg-primary text-white shadow-md'
+                      : `${tab.color} hover:bg-surface hover:text-text`
+                  }`}
+                >
+                  <TabIcon className="h-4 w-4" />
+                  {tab.label}
+                  <span className={`rounded-full px-1.5 text-[10px] ${
+                    activeTab === tab.key ? 'bg-white/20' : 'bg-surface'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
           {historyLoading ? (
@@ -533,20 +718,16 @@ export default function Profile() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="aspect-[3/4] animate-pulse rounded-xl border border-gray-800 bg-background/60"
+                  className="aspect-[3/4] animate-pulse rounded-xl border border-border bg-background/60"
                 />
               ))}
             </div>
           ) : activeTab === 'favorites' ? (
             serverFavorites.length === 0 ? (
               <EmptyHistory
-                icon={<Heart className="h-10 w-10 text-gray-700" />}
+                icon={<Heart className="h-10 w-10 text-text-muted/40" />}
                 title={lang === 'vi' ? 'Chưa có anime yêu thích' : 'No favorites yet'}
-                hint={
-                  lang === 'vi'
-                    ? 'Nhấn nút ❤️ trên trang anime để lưu lại'
-                    : 'Tap the ❤️ button on any anime page to save it here'
-                }
+                hint={lang === 'vi' ? 'Nhấn nút ❤️ trên trang anime để lưu lại' : 'Tap the ❤️ button on any anime page to save it here'}
               />
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -554,7 +735,7 @@ export default function Profile() {
                   <ReloadLink
                     key={fav.anime_id}
                     to={`/anime/${fav.anime_id}`}
-                    className="group overflow-hidden rounded-xl border border-gray-800 bg-background/50 transition-all hover:-translate-y-0.5 hover:border-primary/50"
+                    className="group overflow-hidden rounded-xl border border-border bg-background/50 transition-all hover:-translate-y-0.5 hover:border-primary/50"
                   >
                     <div className="relative aspect-[3/4] overflow-hidden">
                       {fav.anime_cover ? (
@@ -563,12 +744,10 @@ export default function Profile() {
                           alt={fav.anime_title ?? ''}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.visibility = 'hidden'
-                          }}
+                          onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-gray-700">
+                        <div className="flex h-full w-full items-center justify-center text-text-muted/40">
                           <Heart className="h-8 w-8" />
                         </div>
                       )}
@@ -578,33 +757,23 @@ export default function Profile() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between px-2 py-1.5 text-[10px] text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Heart className="h-3 w-3 text-red-400" />
-                        {new Date(fav.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
                   </ReloadLink>
                 ))}
               </div>
             )
-          ) : libraryHistory.length === 0 ? (
+          ) : !activityList || activityList.length === 0 ? (
             <EmptyHistory
-              icon={<BookOpen className="h-10 w-10 text-gray-700" />}
-              title={lang === 'vi' ? 'Thư viện trống' : 'Library is empty'}
-              hint={
-                lang === 'vi'
-                  ? 'Thêm anime vào thư viện từ trang chi tiết'
-                  : 'Add anime to your library from any anime page'
-              }
+              icon={<BookOpen className="h-10 w-10 text-text-muted/40" />}
+              title={t.noActivityForStatus(localizeWatchStatus(activeTab, lang))}
+              hint={lang === 'vi' ? 'Thêm anime vào thư viện từ trang chi tiết' : 'Add anime to your library from any anime page'}
             />
           ) : (
             <div className="space-y-2">
-              {libraryHistory.map((entry) => (
+              {activityList.map((entry) => (
                 <ReloadLink
                   key={entry.anime_id}
                   to={`/anime/${entry.anime_id}`}
-                  className="flex items-center gap-3 rounded-xl border border-gray-800 bg-background/50 p-2.5 transition-all hover:border-primary/40"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-background/50 p-2.5 transition-all hover:border-primary/40"
                 >
                   {entry.anime_cover ? (
                     <img
@@ -614,32 +783,27 @@ export default function Profile() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex h-14 w-10 flex-shrink-0 items-center justify-center rounded-md bg-gray-800 text-gray-600">
+                    <div className="flex h-14 w-10 flex-shrink-0 items-center justify-center rounded-md bg-surface text-text-muted/40">
                       <BookOpen className="h-4 w-4" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-1 text-sm font-semibold text-white">
+                    <p className="line-clamp-1 text-sm font-semibold text-text">
                       {entry.anime_title}
                     </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-                      <span className="rounded-full bg-primary/15 px-2 py-0.5 text-primary">
-                        {entry.status.replace('_', ' ')}
-                      </span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
                       {entry.anime_episodes ? (
-                        <span>
-                          {entry.current_episode}/{entry.anime_episodes} eps
-                        </span>
+                        <span>{entry.current_episode}/{entry.anime_episodes} {lang === 'vi' ? 'tập' : 'eps'}</span>
                       ) : (
-                        <span>{entry.current_episode} eps</span>
+                        <span>{entry.current_episode} {lang === 'vi' ? 'tập' : 'eps'}</span>
                       )}
                       {entry.score !== null && (
-                        <span className="flex items-center gap-0.5 text-yellow-400">
+                        <span className="flex items-center gap-0.5 text-yellow-500">
                           <Star className="h-3 w-3 fill-current" />
                           {entry.score}/10
                         </span>
                       )}
-                      <span className="ml-auto text-gray-500">
+                      <span className="ml-auto text-text-muted/70">
                         {new Date(entry.updated_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -666,8 +830,8 @@ function EmptyHistory({
   return (
     <div className="flex flex-col items-center gap-2 py-10 text-center">
       {icon}
-      <p className="text-sm font-semibold text-gray-200">{title}</p>
-      <p className="text-xs text-gray-500">{hint}</p>
+      <p className="text-sm font-semibold text-text">{title}</p>
+      <p className="text-xs text-text-muted">{hint}</p>
     </div>
   )
 }

@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Theme tokens ─────────────────────────────────────────────────────────── */
+/*
+ * All colors expressed as `R G B` triplets so Tailwind's `<alpha-value>`
+ * machinery can compose them with opacity utilities (e.g. bg-card/80).
+ *
+ * `:root` defaults to the dark palette (historical Anime Wiki look).
+ * `:root.light` overrides them — toggled by the `useTheme` hook.
+ */
+:root {
+  --color-bg: 15 23 42;            /* #0f172a slate-900 */
+  --color-card: 30 41 59;          /* #1e293b slate-800 */
+  --color-surface: 39 49 68;       /* #273144 elevated */
+  --color-border: 51 65 85;        /* #334155 slate-700 */
+  --color-primary: 124 58 237;     /* #7c3aed violet-600 */
+  --color-primary-hover: 109 40 217; /* #6d28d9 violet-700 */
+  --color-primary-dark: 88 28 135;  /* #581c87 violet-900 */
+  --color-text: 248 250 252;       /* #f8fafc slate-50 */
+  --color-text-muted: 148 163 184; /* #94a3b8 slate-400 */
+}
+
+:root.light {
+  --color-bg: 248 250 252;         /* #f8fafc - airy background */
+  --color-card: 255 255 255;       /* #ffffff cards pop on light bg */
+  --color-surface: 241 245 249;    /* #f1f5f9 slate-100 */
+  --color-border: 226 232 240;     /* #e2e8f0 slate-200 */
+  --color-primary: 124 58 237;     /* keep brand color identical */
+  --color-primary-hover: 109 40 217;
+  --color-primary-dark: 88 28 135;
+  --color-text: 15 23 42;          /* #0f172a slate-900 */
+  --color-text-muted: 71 85 105;   /* #475569 slate-600 */
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -9,8 +41,47 @@
 
   body {
     @apply bg-background text-text min-h-screen antialiased;
-    background-color: #0f172a;
-    color: #f8fafc;
+    background-color: rgb(var(--color-bg));
+    color: rgb(var(--color-text));
+    transition: background-color 240ms ease, color 240ms ease;
+  }
+
+  /* In light mode, soften the harsh black shadows used throughout the dark UI */
+  :root.light img.shadow-2xl,
+  :root.light .shadow-2xl {
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18);
+  }
+
+  /* Light mode: borders previously tuned to white/10 become invisible.
+     Up-tone them slightly so cards stay defined. */
+  :root.light .border-white\/5,
+  :root.light .border-white\/10 {
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+  :root.light .bg-white\/5,
+  :root.light .bg-white\/\[0\.05\],
+  :root.light .bg-white\/\[0\.03\],
+  :root.light .bg-white\/\[0\.02\] {
+    background-color: rgba(15, 23, 42, 0.03);
+  }
+  :root.light .bg-black\/30,
+  :root.light .bg-black\/40,
+  :root.light .bg-black\/55,
+  :root.light .bg-black\/60 {
+    background-color: rgba(15, 23, 42, 0.06);
+  }
+  /* Some legacy gray classes need light-mode pass-through */
+  :root.light .bg-gray-800 { background-color: rgb(241 245 249); }
+  :root.light .bg-gray-700 { background-color: rgb(226 232 240); }
+  :root.light .border-gray-800 { border-color: rgb(226 232 240); }
+  :root.light .border-gray-700 { border-color: rgb(226 232 240); }
+  :root.light .text-gray-200 { color: rgb(15 23 42); }
+  :root.light .text-gray-300 { color: rgb(30 41 59); }
+  :root.light .text-gray-400 { color: rgb(71 85 105); }
+  :root.light .text-gray-500 { color: rgb(100 116 139); }
+  :root.light .placeholder-gray-500::placeholder,
+  :root.light .placeholder-gray-600::placeholder {
+    color: rgb(148 163 184);
   }
 }
 
@@ -24,6 +95,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+:root.light {
+  color-scheme: light;
+}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
 
 .page-enter {
   animation: page-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -97,6 +174,57 @@
   }
 }
 
+/* Spotify mini-player rotating disc */
+@keyframes vinylSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.vinyl-spin {
+  animation: vinylSpin 8s linear infinite;
+}
+.vinyl-spin.is-paused {
+  animation-play-state: paused;
+}
+
+/* Spoiler tag — locked then revealed */
+.spoiler-tag {
+  background-color: rgb(15 23 42);
+  color: rgb(15 23 42);
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+  user-select: none;
+  display: inline;
+}
+:root.light .spoiler-tag {
+  background-color: rgb(15 23 42);
+  color: rgb(15 23 42);
+}
+.spoiler-tag:hover {
+  background-color: rgb(51 65 85);
+}
+.spoiler-tag.is-revealed {
+  background-color: rgba(124, 58, 237, 0.12);
+  color: inherit;
+  cursor: default;
+  user-select: text;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+/* Mobile lag killers: collapse expensive blur on small screens */
+@media (max-width: 640px) {
+  .blur-2xl {
+    filter: blur(20px);
+  }
+  .backdrop-blur-xl,
+  .backdrop-blur-md {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Honor user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -104,7 +232,24 @@
 
   .page-enter,
   .surface-float,
-  .hero-fade {
-    animation: none;
+  .hero-fade,
+  .vinyl-spin,
+  .animate-spin,
+  .animate-spin-slow,
+  .animate-spin-slower,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
   }
+}
+
+/* Smooth color transitions when toggling light/dark mode */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+/* But not for things that already animate on hover/focus to avoid double timing */
+button, a, input, textarea, select {
+  transition-duration: 180ms;
 }

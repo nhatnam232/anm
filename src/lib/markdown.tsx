@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 /**
- * Tiny safe markdown → React renderer for AniList descriptions.
+ * Tiny safe markdown → React renderer.
  *
  * Supports:
  *   - paragraph + line breaks
@@ -10,6 +10,7 @@ import type { ReactNode } from 'react'
  *   - `code`
  *   - [text](url) links (rel=noreferrer, target=_blank)
  *   - ~~strike~~
+ *   - ||spoiler||  ← click to reveal (anime-friendly!)
  *   - bare URLs http(s)://...
  *   - HTML tags `<br>` and `<i>` (AniList sometimes mixes these in)
  *
@@ -18,6 +19,36 @@ import type { ReactNode } from 'react'
  */
 
 const URL_REGEX = /https?:\/\/[^\s)<>]+[^\s.,;:!?)<>'"\]]/g
+
+/**
+ * Inline spoiler component. Hidden until clicked. Once revealed it stays
+ * revealed for the lifetime of the component (no toggle back) so users don't
+ * accidentally hide it again while reading.
+ */
+function Spoiler({ children }: { children: ReactNode }) {
+  const [revealed, setRevealed] = useState(false)
+  return (
+    <span
+      className={`spoiler-tag${revealed ? ' is-revealed' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={revealed ? 'Spoiler revealed' : 'Click to reveal spoiler'}
+      title={revealed ? 'Spoiler revealed' : 'Click to reveal spoiler'}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (!revealed) setRevealed(true)
+      }}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && !revealed) {
+          e.preventDefault()
+          setRevealed(true)
+        }
+      }}
+    >
+      {children}
+    </span>
+  )
+}
 
 function inline(text: string, key = 0): ReactNode[] {
   if (!text) return []
@@ -28,7 +59,7 @@ function inline(text: string, key = 0): ReactNode[] {
   text = text.replace(/<b>(.+?)<\/b>/gi, '**$1**')
 
   const tokens: Array<{
-    type: 'text' | 'link' | 'bold' | 'italic' | 'code' | 'strike'
+    type: 'text' | 'link' | 'bold' | 'italic' | 'code' | 'strike' | 'spoiler'
     value: string
     href?: string
   }> = []
@@ -44,6 +75,17 @@ function inline(text: string, key = 0): ReactNode[] {
   }
 
   while (i < text.length) {
+    // ||spoiler|| — must come first because it shares character `|`.
+    if (text.startsWith('||', i)) {
+      const end = text.indexOf('||', i + 2)
+      if (end > -1 && end !== i + 2) {
+        flush()
+        tokens.push({ type: 'spoiler', value: text.slice(i + 2, end) })
+        i = end + 2
+        continue
+      }
+    }
+
     // markdown link [text](url)
     if (text[i] === '[') {
       const closeBracket = text.indexOf(']', i + 1)
@@ -131,11 +173,13 @@ function inline(text: string, key = 0): ReactNode[] {
         </a>,
       )
     } else if (tok.type === 'bold') {
-      out.push(<strong key={k} className="font-semibold text-white">{inline(tok.value, n)}</strong>)
+      out.push(<strong key={k} className="font-semibold text-text">{inline(tok.value, n)}</strong>)
     } else if (tok.type === 'italic') {
       out.push(<em key={k}>{inline(tok.value, n)}</em>)
     } else if (tok.type === 'strike') {
       out.push(<s key={k} className="opacity-70">{inline(tok.value, n)}</s>)
+    } else if (tok.type === 'spoiler') {
+      out.push(<Spoiler key={k}>{inline(tok.value, n)}</Spoiler>)
     } else if (tok.type === 'code') {
       out.push(
         <code key={k} className="rounded bg-white/10 px-1.5 py-0.5 text-[0.85em] text-amber-200">

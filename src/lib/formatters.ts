@@ -79,6 +79,36 @@ export function localizeGenres(genres: string[] | null | undefined, lang: string
   return genres.map((g) => localizeGenre(g, lang))
 }
 
+// ─── Season translation ───────────────────────────────────────────────────────
+
+const SEASON_VI: Record<string, string> = {
+  Winter: 'Đông',
+  Spring: 'Xuân',
+  Summer: 'Hè',
+  Fall: 'Thu',
+  WINTER: 'Đông',
+  SPRING: 'Xuân',
+  SUMMER: 'Hè',
+  FALL: 'Thu',
+}
+
+/**
+ * Localize season strings like "Fall 2022" → "Thu 2022".
+ * Accepts pure season ("Fall"), full string ("Fall 2022"),
+ * or AniList enum format ("FALL").
+ */
+export function localizeSeason(season: string | null | undefined, lang: string): string {
+  if (!season) return lang === 'vi' ? 'Không rõ' : 'Unknown'
+  if (lang !== 'vi') {
+    // Normalize "FALL 2022" → "Fall 2022" for English display
+    return season.replace(/^(WINTER|SPRING|SUMMER|FALL)\b/i, (m) =>
+      m.charAt(0).toUpperCase() + m.slice(1).toLowerCase(),
+    )
+  }
+  // Vietnamese: replace English season name with VN equivalent
+  return season.replace(/\b(Winter|Spring|Summer|Fall|WINTER|SPRING|SUMMER|FALL)\b/g, (m) => SEASON_VI[m] ?? m)
+}
+
 // ─── Episode count cleaning ───────────────────────────────────────────────────
 
 /**
@@ -145,4 +175,23 @@ export function orUnknown(value: string | null | undefined, lang: string): strin
     return lang === 'vi' ? 'Chưa rõ' : 'Unknown'
   }
   return value
+}
+
+// ─── Watch status localization ────────────────────────────────────────────────
+
+export function localizeWatchStatus(
+  status: string | null | undefined,
+  lang: string,
+): string {
+  if (!status) return ''
+  const map: Record<string, { vi: string; en: string }> = {
+    watching:       { vi: 'Đang xem',  en: 'Watching' },
+    completed:      { vi: 'Đã xem',    en: 'Completed' },
+    plan_to_watch:  { vi: 'Muốn xem',  en: 'Plan to Watch' },
+    dropped:        { vi: 'Đã bỏ',     en: 'Dropped' },
+    on_hold:        { vi: 'Tạm dừng',  en: 'On Hold' },
+  }
+  const entry = map[status]
+  if (!entry) return status
+  return lang === 'vi' ? entry.vi : entry.en
 }

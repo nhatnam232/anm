@@ -1,43 +1,103 @@
+import {
+  BookOpen,
+  Calendar,
+  Compass,
+  Heart,
+  Home,
+  Search,
+  Shield,
+  Star,
+  Trophy,
+} from 'lucide-react'
 import Logo from './Logo'
 import ReloadLink from '@/components/ReloadLink'
 import { useLangContext } from '@/providers/LangProvider'
-import { Shield } from 'lucide-react'
 
+/**
+ * Site footer with grouped navigation columns. Each link gets its own icon so
+ * the layout stops looking like a wall of plain text + a single logo.
+ */
 export default function Footer() {
   const { t, lang } = useLangContext()
 
+  const sections: Array<{
+    title: string
+    icon: React.ComponentType<{ className?: string }>
+    links: Array<{ to: string; label: string; icon: React.ComponentType<{ className?: string }> }>
+  }> = [
+    {
+      title: lang === 'vi' ? 'Khám phá' : 'Discover',
+      icon: Compass,
+      links: [
+        { to: '/', label: t.home, icon: Home },
+        { to: '/search', label: t.browse, icon: Search },
+        { to: '/season', label: t.seasonNav, icon: Star },
+      ],
+    },
+    {
+      title: lang === 'vi' ? 'Cộng đồng' : 'Community',
+      icon: Heart,
+      links: [
+        { to: '/ranking', label: t.rankingNav, icon: Trophy },
+        { to: '/schedule', label: t.scheduleNav, icon: Calendar },
+        { to: '/library', label: t.libraryNav, icon: BookOpen },
+      ],
+    },
+    {
+      title: lang === 'vi' ? 'Pháp lý' : 'Legal',
+      icon: Shield,
+      links: [{ to: '/tos', label: lang === 'vi' ? 'Điều khoản' : 'Terms of Service', icon: Shield }],
+    },
+  ]
+
   return (
-    <footer className="mt-auto border-t border-gray-800 bg-card py-12">
-      <div className="container mx-auto px-4 text-center">
-        <div className="mb-6 flex items-center justify-center">
-          <Logo size={40} />
+    <footer className="mt-auto border-t border-border bg-card py-12">
+      <div className="container mx-auto px-4">
+        {/* Brand block */}
+        <div className="mb-10 flex flex-col items-center text-center">
+          <Logo size={48} />
+          <p className="mt-4 max-w-md text-sm text-text-muted">{t.footerTagline}</p>
         </div>
-        <p className="mx-auto mb-8 max-w-md text-gray-400">{t.footerTagline}</p>
-        <div className="mb-8 flex flex-wrap justify-center gap-6 text-sm text-gray-500">
-          <ReloadLink to="/" className="transition-colors hover:text-primary">
-            {t.home}
-          </ReloadLink>
-          <ReloadLink to="/search" className="transition-colors hover:text-primary">
-            {t.browse}
-          </ReloadLink>
-          <ReloadLink to="/ranking" className="transition-colors hover:text-primary">
-            {lang === 'vi' ? 'Xếp hạng' : 'Ranking'}
-          </ReloadLink>
-          <ReloadLink to="/season" className="transition-colors hover:text-primary">
-            {lang === 'vi' ? 'Theo mùa' : 'Seasonal'}
-          </ReloadLink>
-          <ReloadLink to="/schedule" className="transition-colors hover:text-primary">
-            {lang === 'vi' ? 'Lịch chiếu' : 'Schedule'}
-          </ReloadLink>
-          <ReloadLink
-            to="/tos"
-            className="flex items-center gap-1 transition-colors hover:text-primary"
-          >
-            <Shield className="h-3.5 w-3.5" />
-            {lang === 'vi' ? 'Điều khoản' : 'Terms of Service'}
-          </ReloadLink>
+
+        {/* Link grid */}
+        <div className="grid grid-cols-1 gap-8 border-t border-border pt-8 sm:grid-cols-3">
+          {sections.map((section) => {
+            const SectionIcon = section.icon
+            return (
+              <div key={section.title}>
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-text">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <SectionIcon className="h-3.5 w-3.5" />
+                  </span>
+                  {section.title}
+                </h3>
+                <ul className="space-y-2">
+                  {section.links.map((link) => {
+                    const LinkIcon = link.icon
+                    return (
+                      <li key={link.to}>
+                        <ReloadLink
+                          to={link.to}
+                          className="group inline-flex items-center gap-2 text-sm text-text-muted transition-colors hover:text-primary"
+                        >
+                          <LinkIcon className="h-3.5 w-3.5 text-text-muted/70 transition-colors group-hover:text-primary" />
+                          {link.label}
+                        </ReloadLink>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
         </div>
-        <div className="text-sm text-gray-600">
+
+        {/* Copyright */}
+        <div className="mt-10 border-t border-border pt-6 text-center text-xs text-text-muted">
+          <div className="mb-2 flex items-center justify-center gap-1.5 text-text-muted/80">
+            <Logo size={20} showWordmark={false} />
+            <span>Anime Wiki</span>
+          </div>
           &copy; {new Date().getFullYear()} Anime Wiki. {t.unofficialIndex}
         </div>
       </div>

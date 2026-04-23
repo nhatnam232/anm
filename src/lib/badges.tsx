@@ -2,13 +2,13 @@ import { Crown, Flame, Leaf, Shield, Sparkles, Star, Video } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
- * User badges system. Each badge has:
+ * User badges & permission system. Each badge has:
  *   - id            stored in profiles.badges[] (or computed at runtime)
  *   - icon          lucide-react icon
  *   - labelEn/labelVi
  *   - tone          tailwind class set: text + bg + border + glow ring
  *
- * Manual badges (mod, admin) come from `profiles.badges` array (string[]).
+ * Manual badges (mod, admin, owner) come from `profiles.badges` array (string[]).
  * Auto badges (newcomer, member, active, top_fan, reviewer) are derived from
  * counters/timestamps so we never need to backfill them.
  */
@@ -21,6 +21,7 @@ export type BadgeId =
   | 'reviewer'
   | 'mod'
   | 'admin'
+  | 'owner'
 
 export type BadgeDef = {
   id: BadgeId
@@ -32,6 +33,8 @@ export type BadgeDef = {
   tone: string
   /** small outline border-only style for use over an avatar overlay */
   ring: string
+  /** numeric weight — higher wins when picking the "primary" badge for a user */
+  weight: number
 }
 
 export const BADGES: Record<BadgeId, BadgeDef> = {
@@ -43,6 +46,7 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
     description: 'Account younger than 7 days',
     tone: 'text-slate-200 bg-slate-700/40 border-slate-500/40',
     ring: 'ring-slate-400/40',
+    weight: 5,
   },
   member: {
     id: 'member',
@@ -52,6 +56,7 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
     description: 'Member for 7+ days',
     tone: 'text-violet-200 bg-violet-500/15 border-violet-400/40',
     ring: 'ring-violet-400/50',
+    weight: 10,
   },
   active: {
     id: 'active',
@@ -61,6 +66,7 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
     description: 'Posted 10+ comments',
     tone: 'text-orange-200 bg-orange-500/15 border-orange-400/40',
     ring: 'ring-orange-400/50',
+    weight: 20,
   },
   top_fan: {
     id: 'top_fan',
@@ -70,6 +76,7 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
     description: '30+ anime in library',
     tone: 'text-amber-200 bg-amber-500/15 border-amber-400/40',
     ring: 'ring-amber-400/50',
+    weight: 25,
   },
   reviewer: {
     id: 'reviewer',
@@ -79,25 +86,39 @@ export const BADGES: Record<BadgeId, BadgeDef> = {
     description: '20+ reviews',
     tone: 'text-pink-200 bg-pink-500/15 border-pink-400/40',
     ring: 'ring-pink-400/50',
+    weight: 30,
   },
   mod: {
     id: 'mod',
     icon: Shield,
     labelEn: 'Mod',
     labelVi: 'Quản trị',
-    description: 'Granted by admins',
+    description: 'Granted by admins — can delete other users\' comments',
     tone: 'text-sky-200 bg-sky-500/15 border-sky-400/40',
     ring: 'ring-sky-400/60',
+    weight: 80,
   },
   admin: {
     id: 'admin',
     icon: Crown,
     labelEn: 'Admin',
     labelVi: 'Sáng lập',
-    description: 'Site admin',
+    description: 'Site administrator — full moderation rights',
     tone:
       'text-yellow-100 bg-gradient-to-r from-yellow-500/30 via-amber-400/30 to-orange-500/30 border-yellow-300/60',
     ring: 'ring-yellow-300/70',
+    weight: 90,
+  },
+  owner: {
+    id: 'owner',
+    icon: Crown,
+    labelEn: 'Owner',
+    labelVi: 'Tác giả',
+    description: 'Project owner — supreme authority',
+    tone:
+      'text-rose-100 bg-gradient-to-r from-rose-500/40 via-fuchsia-500/40 to-purple-500/40 border-rose-300/70',
+    ring: 'ring-rose-300/80',
+    weight: 100,
   },
 }
 
@@ -110,7 +131,7 @@ export type UserStats = {
 
 /**
  * Compute the list of auto-earned badges from a user's stats. Manual badges
- * (mod / admin) are added separately by the caller from profile.badges[].
+ * (mod / admin / owner) are added separately by the caller from profile.badges[].
  */
 export function computeAutoBadges(stats: UserStats): BadgeId[] {
   const out: BadgeId[] = []
@@ -131,8 +152,90 @@ export function computeAutoBadges(stats: UserStats): BadgeId[] {
 export function mergeBadges(autoBadges: BadgeId[], manualBadges?: string[] | null): BadgeId[] {
   const allowed = new Set<BadgeId>(Object.keys(BADGES) as BadgeId[])
   const manual = (manualBadges ?? []).filter((b): b is BadgeId => allowed.has(b as BadgeId))
-  // Dedupe + preserve order: manual first (priority for display), then auto.
-  return Array.from(new Set<BadgeId>([...manual, ...autoBadges]))
+  // Sort by weight desc so the most prestigious badges show first.
+  const merged = Array.from(new Set<BadgeId>([...manual, ...autoBadges]))
+  return merged.sort((a, b) => BADGES[b].weight - BADGES[a].weight)
+}
+
+/**
+ * Pick the highest-weight badge to use for visual styling (avatar ring color, etc.)
+ * Returns null if the user has no badges.
+ */
+export function getPrimaryBadge(ids: BadgeId[]): BadgeId | null {
+  if (!ids.length) return null
+  return ids[0] // already sorted desc by mergeBadges
+}
+
+/**
+ * Returns the Tailwind classes for the avatar ring based on the primary badge.
+ * Falls back to a subtle violet ring for users without any standout badge.
+ */
+export function getAvatarRingClass(ids: BadgeId[]): string {
+  const primary = getPrimaryBadge(ids)
+  if (!primary) return 'ring-2 ring-violet-400/30'
+  switch (primary) {
+    case 'owner':
+      return 'ring-2 ring-rose-400/80 ring-offset-2 ring-offset-background shadow-[0_0_18px_rgba(244,63,94,0.5)]'
+    case 'admin':
+      return 'ring-2 ring-yellow-300/80 ring-offset-2 ring-offset-background shadow-[0_0_18px_rgba(252,211,77,0.45)]'
+    case 'mod':
+      return 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-background shadow-[0_0_14px_rgba(56,189,248,0.45)]'
+    case 'reviewer':
+      return 'ring-2 ring-pink-400/70 ring-offset-1 ring-offset-background'
+    case 'top_fan':
+      return 'ring-2 ring-amber-400/70 ring-offset-1 ring-offset-background'
+    case 'active':
+      return 'ring-2 ring-orange-400/60 ring-offset-1 ring-offset-background'
+    case 'member':
+      return 'ring-2 ring-violet-400/50'
+    case 'newcomer':
+    default:
+      return 'ring-2 ring-slate-400/40'
+  }
+}
+
+// ─── Permissions ────────────────────────────────────────────────────────────
+// Centralized permission helpers — keep authorization logic in one place so
+// future role changes don't require hunting through dozens of components.
+
+export type ProfileLike = {
+  id?: string
+  badges?: string[] | null
+} | null | undefined
+
+/** True if the profile carries the "owner" badge. */
+export function isOwner(profile: ProfileLike): boolean {
+  return Boolean(profile?.badges?.includes('owner'))
+}
+
+/** True if the profile carries the "admin" badge (or higher). */
+export function isAdmin(profile: ProfileLike): boolean {
+  return Boolean(profile?.badges?.some((b) => b === 'admin' || b === 'owner'))
+}
+
+/** True if the profile is admin/owner OR a moderator. */
+export function isModerator(profile: ProfileLike): boolean {
+  return Boolean(
+    profile?.badges?.some((b) => b === 'mod' || b === 'admin' || b === 'owner'),
+  )
+}
+
+/**
+ * Can the given user delete a comment? Authors can always delete their own.
+ * Moderators and above can delete anyone's content.
+ */
+export function canDeleteComment(viewerProfile: ProfileLike, commentAuthorId: string | null): boolean {
+  if (!viewerProfile?.id) return false
+  if (commentAuthorId && commentAuthorId === viewerProfile.id) return true
+  return isModerator(viewerProfile)
+}
+
+/** Returns 'owner' | 'admin' | 'mod' | null — the highest moderation role. */
+export function getStaffRole(profile: ProfileLike): 'owner' | 'admin' | 'mod' | null {
+  if (isOwner(profile)) return 'owner'
+  if (isAdmin(profile)) return 'admin'
+  if (isModerator(profile)) return 'mod'
+  return null
 }
 
 // ─── Visual components ───────────────────────────────────────────────────────

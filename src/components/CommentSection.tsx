@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   Send,
   Share2,
+  ShieldCheck,
   Trash2,
   X,
 } from 'lucide-react'
@@ -21,7 +22,19 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
 import AuthModal from './AuthModal'
-import { BadgeRow, computeAutoBadges, mergeBadges, type BadgeId } from '@/lib/badges'
+import EmptyComments from './EmptyComments'
+import MarkdownToolbar, { applyMarkdownShortcut } from './MarkdownToolbar'
+import UserAvatar from './UserAvatar'
+import {
+  BadgeRow,
+  canDeleteComment,
+  computeAutoBadges,
+  isModerator,
+  mergeBadges,
+  type BadgeId,
+} from '@/lib/badges'
+import { MarkdownText } from '@/lib/markdown'
+
 
 type EntityType = 'anime' | 'character'
 
@@ -76,6 +89,11 @@ export default function CommentSection({ entityType, entityId }: Props) {
   const [pendingImage, setPendingImage] = useState<File | null>(null)
   const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  const viewerIsMod = isModerator(profile)
+
 
   const onPickImage = (file: File | null) => {
     if (pendingImagePreview) URL.revokeObjectURL(pendingImagePreview)
@@ -360,7 +378,9 @@ export default function CommentSection({ entityType, entityId }: Props) {
         depth={depth}
         children={children}
         currentUserId={user?.id ?? null}
+        viewerIsMod={viewerIsMod}
         replyOpen={replyTo === node.id}
+
         replyBody={replyBody}
         submitting={submitting}
         formatWhen={formatWhen}
@@ -406,26 +426,41 @@ export default function CommentSection({ entityType, entityId }: Props) {
       <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent p-4 shadow-xl backdrop-blur-xl">
         {user ? (
           <div className="flex gap-3">
-            {profile?.avatar_url || user.user_metadata?.avatar_url ? (
-              <img
-                src={profile?.avatar_url || user.user_metadata?.avatar_url}
-                alt=""
-                className="h-10 w-10 flex-shrink-0 rounded-full object-cover ring-2 ring-primary/30"
-              />
-            ) : (
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-pink-500 text-sm font-bold text-white shadow-lg shadow-primary/30">
-                {(profile?.display_name || user.email || 'U')[0].toUpperCase()}
-              </div>
-            )}
+            <UserAvatar
+              src={profile?.avatar_url || user.user_metadata?.avatar_url}
+              name={profile?.display_name || user.email || 'U'}
+              badges={mergeBadges(
+                computeAutoBadges({
+                  createdAt: profile?.created_at ?? user.created_at,
+                  commentsCount: profile?.comments_count ?? 0,
+                  libraryCount: profile?.library_count ?? 0,
+                  reviewsCount: profile?.reviews_count ?? 0,
+                }),
+                profile?.badges,
+              )}
+              size={40}
+            />
             <div className="flex-1">
+
               <textarea
+                ref={composerRef}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
+                onKeyDown={(e) => applyMarkdownShortcut(e, body, setBody)}
                 placeholder={t.commentPlaceholder}
                 rows={3}
                 maxLength={2000}
                 className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-[15px] leading-relaxed text-white placeholder-gray-500 backdrop-blur transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
+              {/* Markdown formatting toolbar — bold, italic, spoiler */}
+              <div className="mt-2">
+                <MarkdownToolbar
+                  textareaRef={composerRef}
+                  value={body}
+                  onChange={setBody}
+                />
+              </div>
+
               {pendingImagePreview && (
                 <div className="relative mt-2 inline-block">
                   <img
@@ -521,11 +556,9 @@ export default function CommentSection({ entityType, entityId }: Props) {
             ))}
           </div>
         ) : topLevel.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] py-12 text-center">
-            <MessageSquare className="h-10 w-10 text-gray-700" />
-            <p className="text-sm text-gray-500">{t.noComments}</p>
-          </div>
+          <EmptyComments />
         ) : (
+
           <AnimatePresence initial={false}>
             {topLevel.map((c) => renderNode(c))}
           </AnimatePresence>
@@ -544,6 +577,8 @@ type ItemProps = {
   depth: number
   children: CommentRow[]
   currentUserId: string | null
+  /** Whether the viewer can moderate (delete) any comment, not just their own. */
+  viewerIsMod?: boolean
   replyOpen: boolean
   replyBody: string
   submitting: boolean
@@ -554,7 +589,8 @@ type ItemProps = {
   onDelete: () => void
   onVote: (v: -1 | 1) => void
   onShare: () => void
-  renderNode: (n: CommentRow, depth?: number) => React.ReactNode
+  /** Use any here to avoid pulling React types into export — we only render the result. */
+  renderNode: (n: CommentRow, depth?: number) => any
 }
 
 function CommentItem({
@@ -562,6 +598,7 @@ function CommentItem({
   depth,
   children,
   currentUserId,
+  viewerIsMod = false,
   replyOpen,
   replyBody,
   submitting,
@@ -575,6 +612,7 @@ function CommentItem({
   renderNode,
 }: ItemProps) {
   const { t, lang } = useLangContext()
+  const toast = useToast()
   const [moreOpen, setMoreOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const tooLong = node.body.length > COLLAPSE_THRESHOLD
@@ -584,6 +622,24 @@ function CommentItem({
   const avatar = node.author?.avatar_url
   const isOwn = currentUserId === node.user_id
   const score = node.upvotes - node.downvotes
+
+  // Compute author badges once for both inline display + ring color.
+  const authorBadgeIds: BadgeId[] = mergeBadges(
+    computeAutoBadges({
+      createdAt: node.author?.created_at,
+      commentsCount: node.author?.comments_count ?? 0,
+      libraryCount: node.author?.library_count ?? 0,
+      reviewsCount: node.author?.reviews_count ?? 0,
+    }),
+    node.author?.badges ?? [],
+  )
+
+  const canDelete = canDeleteComment(
+    { id: currentUserId ?? undefined, badges: viewerIsMod ? ['mod'] : [] },
+    node.user_id,
+  )
+  const showAdminDelete = canDelete && !isOwn
+
 
   return (
     <motion.div
@@ -643,46 +699,31 @@ function CommentItem({
         </div>
 
         <div className="min-w-0 flex-1">
-          {/* Header */}
+          {/* Header — avatar with badge-tinted ring */}
           <div className="flex items-center gap-2 text-sm">
-            {avatar ? (
-              <img
-                src={avatar}
-                alt=""
-                className="h-7 w-7 flex-shrink-0 rounded-full object-cover ring-1 ring-white/10"
-              />
-            ) : (
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-fuchsia-500 text-xs font-bold text-white">
-                {authorName[0]?.toUpperCase()}
-              </div>
-            )}
+            <UserAvatar
+              src={avatar}
+              name={authorName}
+              badges={authorBadgeIds}
+              size={28}
+            />
             <span className="truncate font-semibold text-primary">{authorName}</span>
             {isOwn && (
               <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
                 {lang === 'vi' ? 'Bạn' : 'you'}
               </span>
             )}
-            {(() => {
-              const ids: BadgeId[] = mergeBadges(
-                computeAutoBadges({
-                  createdAt: node.author?.created_at,
-                  commentsCount: node.author?.comments_count ?? 0,
-                  libraryCount: node.author?.library_count ?? 0,
-                  reviewsCount: node.author?.reviews_count ?? 0,
-                }),
-                node.author?.badges ?? [],
-              )
-              return <BadgeRow ids={ids} lang={lang} max={2} size="xs" />
-            })()}
+            <BadgeRow ids={authorBadgeIds} lang={lang} max={2} size="xs" />
             <span className="ml-auto text-xs text-gray-500" suppressHydrationWarning>
               {formatWhen(node.created_at)}
             </span>
           </div>
 
-          {/* Body */}
-          <p className="mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed text-gray-100">
-            {visibleBody}
-          </p>
+          {/* Body — full markdown rendering with spoiler/bold/italic support */}
+          <div className="mt-1.5 break-words text-[15px] leading-relaxed text-gray-100">
+            <MarkdownText className="">{visibleBody}</MarkdownText>
+          </div>
+
           {tooLong && (
             <button
               onClick={() => setExpanded((v) => !v)}
@@ -788,7 +829,7 @@ function CommentItem({
                 transition={{ duration: 0.12 }}
                 className="absolute right-0 z-20 mt-1 w-32 overflow-hidden rounded-xl border border-white/10 bg-slate-950/90 text-sm shadow-xl backdrop-blur"
               >
-                {isOwn ? (
+                {isOwn && (
                   <button
                     onClick={() => {
                       setMoreOpen(false)
@@ -799,10 +840,37 @@ function CommentItem({
                     <Trash2 className="h-3.5 w-3.5" />
                     {t.delete}
                   </button>
-                ) : (
+                )}
+                {/* Admin/Mod can delete other users' comments — backed by RLS
+                    `is_mod_or_above()` so it's safe even if the UI is bypassed. */}
+                {showAdminDelete && (
                   <button
                     onClick={() => {
                       setMoreOpen(false)
+                      if (
+                        window.confirm(
+                          lang === 'vi'
+                            ? 'Xóa bình luận này với tư cách quản trị viên?'
+                            : 'Delete this comment as a moderator?',
+                        )
+                      ) {
+                        onDelete()
+                      }
+                    }}
+                    className="flex w-full items-center gap-2 border-t border-white/5 px-3 py-2 text-rose-300 hover:bg-rose-500/15"
+                    title={t.adminDelete}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {t.adminDelete}
+                  </button>
+                )}
+                {!isOwn && (
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false)
+                      if (window.confirm(t.reportConfirm)) {
+                        toast.success(t.reportSent)
+                      }
                     }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-gray-200 hover:bg-white/10"
                   >
@@ -810,6 +878,7 @@ function CommentItem({
                     {lang === 'vi' ? 'Báo cáo' : 'Report'}
                   </button>
                 )}
+
               </motion.div>
             )}
           </AnimatePresence>

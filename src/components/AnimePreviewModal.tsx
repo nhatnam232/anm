@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Calendar, Film, Flame, Heart, Languages, Loader2, ShieldAlert, Star, Tv, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLangContext } from '@/providers/LangProvider'
-import { localizeStatus } from '@/lib/formatters'
+import { localizeSeason, localizeStatus } from '@/lib/formatters'
+
 import { useManualTranslation } from '@/hooks/useManualTranslation'
 import { MarkdownText } from '@/lib/markdown'
 
@@ -193,9 +194,10 @@ export default function AnimePreviewModal({ anime, open, onClose }: Props) {
                   {anime.season && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 text-gray-200">
                       <Calendar className="h-3 w-3" />
-                      {anime.season}
+                      {localizeSeason(anime.season, lang)}
                     </span>
                   )}
+
                   {anime.status && (
                     <span className="rounded-full bg-white/5 px-2 py-1 text-gray-200">
                       {localizeStatus(anime.status, lang)}

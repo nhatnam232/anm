@@ -5,6 +5,8 @@ import ReloadLink from '@/components/ReloadLink'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { useLangContext } from '@/providers/LangProvider'
 import { fetchAnimeSchedule } from '@/lib/api'
+import { localizeSeason, localizeStatus } from '@/lib/formatters'
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
