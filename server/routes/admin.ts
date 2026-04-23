@@ -204,7 +204,10 @@ router.get('/cron-secret', async (req: Request, res: Response) => {
     .eq('id', userData.user.id)
     .maybeSingle()
 
-  const badges = (profile?.badges as string[] | undefined) ?? []
+  if (!profile) {
+    return res.status(403).json({ error: 'Profile not found' })
+  }
+  const badges = ((profile as { badges?: string[] }).badges) ?? []
   if (!badges.includes('owner')) {
     return res.status(403).json({ error: 'Owner badge required' })
   }
