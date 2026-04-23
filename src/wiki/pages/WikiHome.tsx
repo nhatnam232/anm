@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom'
 import { BookOpen, BookPlus, Sparkles, UserPlus, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
 import { listCharacters, listStories } from '@/wiki/registry'
-import { stripWikiTags } from '@/wiki/utils/parser'
+import { shortPreview, proxyImage } from '@/wiki/utils/format'
 import { useWikiText } from '@/wiki/i18n'
+import { useLangContext } from '@/providers/LangProvider'
 
 export default function WikiHome() {
   const t = useWikiText()
+  const { lang } = useLangContext()
   const characters = listCharacters()
   const stories = listStories()
 
@@ -64,15 +66,16 @@ export default function WikiHome() {
               className="group flex gap-3 rounded-2xl border border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/60"
             >
               <img
-                src={c.avatarUrl}
+                src={proxyImage(c.avatarUrl)}
                 alt=""
+                referrerPolicy="no-referrer"
                 className="h-20 w-14 flex-shrink-0 rounded-md object-cover"
                 onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
               />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-text group-hover:text-primary">{c.name}</p>
                 <p className="mt-1 line-clamp-3 text-xs text-text-muted">
-                  {stripWikiTags(c.shortBio)}
+                  {shortPreview(c.shortBio, lang)}
                 </p>
               </div>
             </Link>
@@ -98,9 +101,11 @@ export default function WikiHome() {
               >
                 {s.coverUrl ? (
                   <img
-                    src={s.coverUrl}
+                    src={proxyImage(s.coverUrl)}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="h-24 w-16 flex-shrink-0 rounded-md object-cover"
+                    onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
                   />
                 ) : (
                   <div className="flex h-24 w-16 flex-shrink-0 items-center justify-center rounded-md bg-surface text-text-muted">
@@ -110,7 +115,7 @@ export default function WikiHome() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-text">{s.title}</p>
                   <p className="mt-1 line-clamp-2 text-xs text-text-muted">
-                    {stripWikiTags(s.shortSummary)}
+                    {shortPreview(s.shortSummary, lang)}
                   </p>
                   {s.characterIds && s.characterIds.length > 0 && (
                     <p className="mt-2 text-[11px] text-text-muted">

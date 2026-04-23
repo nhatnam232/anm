@@ -6,6 +6,7 @@ import { getStory } from '@/wiki/registry'
 import { useWikiCharacter } from '@/wiki/hooks/useWikiCharacter'
 import { useWikiText } from '@/wiki/i18n'
 import WikipediaPanel from '@/wiki/components/WikipediaPanel'
+import { proxyImage } from '@/wiki/utils/format'
 
 export default function WikiCharacter() {
   const { id = '' } = useParams<{ id: string }>()
@@ -122,8 +123,9 @@ export default function WikiCharacter() {
           <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-xl">
             {char.avatarUrl && (
               <img
-                src={char.avatarUrl}
+                src={proxyImage(char.avatarUrl)}
                 alt={char.name}
+                referrerPolicy="no-referrer"
                 className="h-72 w-full object-cover"
                 onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
               />

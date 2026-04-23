@@ -6,6 +6,7 @@ import { getCharacter } from '@/wiki/registry'
 import { useWikiStory } from '@/wiki/hooks/useWikiStory'
 import { useWikiText } from '@/wiki/i18n'
 import WikipediaPanel from '@/wiki/components/WikipediaPanel'
+import { proxyImage } from '@/wiki/utils/format'
 
 export default function WikiStory() {
   const { id = '' } = useParams<{ id: string }>()
@@ -44,7 +45,7 @@ export default function WikiStory() {
         {/* Hero with cover */}
         {story.coverUrl && (
           <div className="relative h-48 w-full overflow-hidden sm:h-64">
-            <img src={story.coverUrl} alt="" className="h-full w-full object-cover opacity-70" />
+            <img src={proxyImage(story.coverUrl)} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover opacity-70" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
             <div
               className="absolute inset-0"
               style={{
@@ -115,8 +116,9 @@ export default function WikiStory() {
                     className="flex items-center gap-3 rounded-xl border border-border bg-surface/40 p-2 text-sm font-medium text-text transition-colors hover:border-primary/50 hover:text-primary"
                   >
                     <img
-                      src={c!.avatarUrl}
+                      src={proxyImage(c!.avatarUrl)}
                       alt=""
+                      referrerPolicy="no-referrer"
                       className="h-12 w-9 flex-shrink-0 rounded-md object-cover"
                       onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
                     />
