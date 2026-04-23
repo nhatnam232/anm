@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, BookMarked, Search } from 'lucide-react'
+import { ArrowLeft, BookMarked, Globe2, Search } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { searchCharacters } from '@/wiki/registry'
 import { useWikiText } from '@/wiki/i18n'
+import { useLangContext } from '@/providers/LangProvider'
 import type { WikiCharacter } from '@/wiki/types'
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
  */
 export default function WikiLayout({ children, showSearch = true }: Props) {
   const t = useWikiText()
+  const { lang, setLang } = useLangContext()
   const [q, setQ] = useState('')
   const [results, setResults] = useState<WikiCharacter[]>([])
   const [open, setOpen] = useState(false)
@@ -65,8 +67,22 @@ export default function WikiLayout({ children, showSearch = true }: Props) {
             </span>
           </Link>
 
+          {/* Quick language toggle inside the wiki — independent from main app
+              cog so users in the middle of reading bio can swap fast. Sets the
+              same global lang via useLangContext, then triggers a tiny reload
+              hint via re-render. */}
+          <button
+            type="button"
+            onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+            title={lang === 'vi' ? 'Switch to English' : 'Chuyển sang tiếng Việt'}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-muted transition-colors hover:border-primary hover:text-primary"
+          >
+            <Globe2 className="h-3.5 w-3.5" />
+            <span className="font-mono uppercase">{lang}</span>
+          </button>
+
           {showSearch && (
-            <div className="relative ml-auto max-w-xl flex-1" ref={ref}>
+            <div className="relative max-w-xl flex-1" ref={ref}>
               <Search className="absolute left-4 top-3 h-4 w-4 text-text-muted" />
               <input
                 value={q}

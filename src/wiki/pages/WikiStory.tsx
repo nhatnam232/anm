@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, Calendar, ExternalLink, Loader2, Pencil, Sparkles, Tv, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
-import WikiTextRenderer from '@/wiki/components/WikiTextRenderer'
+import TranslatedText from '@/wiki/components/TranslatedText'
 import { getCharacter } from '@/wiki/registry'
 import { useWikiStory } from '@/wiki/hooks/useWikiStory'
 import { useWikiText } from '@/wiki/i18n'
@@ -90,12 +90,12 @@ export default function WikiStory() {
           <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-text-muted">
             {t.shortSummary}
           </h2>
-          <WikiTextRenderer text={story.shortSummary} className="mb-6" />
+          <TranslatedText text={story.shortSummary} className="mb-6" />
 
           <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-text-muted">
             {t.fullDetails}
           </h2>
-          <WikiTextRenderer text={story.body} />
+          <TranslatedText text={story.body} />
 
           {/* Wikipedia auto-import — VI first, EN fallback with DeepL translation */}
           <WikipediaPanel slug={story.wikipediaSlug} slugVi={story.wikipediaSlugVi} />

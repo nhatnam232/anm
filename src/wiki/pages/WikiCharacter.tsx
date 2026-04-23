@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, BookOpen, Calendar, ExternalLink, Loader2, Pencil, Sparkles, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
-import WikiTextRenderer from '@/wiki/components/WikiTextRenderer'
+import TranslatedText from '@/wiki/components/TranslatedText'
 import { getStory } from '@/wiki/registry'
 import { useWikiCharacter } from '@/wiki/hooks/useWikiCharacter'
 import { useWikiText } from '@/wiki/i18n'
@@ -71,7 +71,7 @@ export default function WikiCharacter() {
           <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-text-muted">
             {t.biography}
           </h2>
-          <WikiTextRenderer text={char.bio} />
+          <TranslatedText text={char.bio} />
 
           {/* Wikipedia auto-import — VI first, EN fallback, DeepL when needed */}
           <WikipediaPanel slug={char.wikipediaSlug} slugVi={char.wikipediaSlugVi} />
