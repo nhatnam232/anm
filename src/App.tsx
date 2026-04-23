@@ -8,6 +8,7 @@ import TosModal from '@/components/TosModal'
 import SpotifyMiniPlayer from '@/components/SpotifyMiniPlayer'
 import PWAInstaller from '@/components/PWAInstaller'
 import CommandPalette, { useCommandPaletteShortcut } from '@/components/CommandPalette'
+import LazyChunkErrorBoundary from '@/components/LazyChunkErrorBoundary'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { LangProvider } from '@/providers/LangProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
@@ -62,8 +63,9 @@ export default function App() {
                   <NowPlayingProvider>
                     <Router>
                       <TosModal />
-                      <Suspense fallback={<PageFallback />}>
-                        <Routes>
+                      <LazyChunkErrorBoundary>
+                        <Suspense fallback={<PageFallback />}>
+                          <Routes>
                           <Route path="/" element={<Home />} />
                           <Route path="/anime/:id" element={<AnimeDetail />} />
                           <Route path="/character/:id" element={<CharacterDetail />} />
@@ -83,9 +85,10 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/tos" element={<ToS />} />
                           <Route path="/browse" element={<SearchResults />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </Suspense>
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </Suspense>
+                      </LazyChunkErrorBoundary>
                       {/* Floating global mini-player so Spotify keeps playing across pages */}
                       <SpotifyMiniPlayer />
                       {/* PWA install prompt + service worker registration */}
