@@ -1,21 +1,28 @@
 import {
+  BookmarkPlus,
   BookOpen,
   Calendar,
   Compass,
+  GitCompareArrows,
   Heart,
   Home,
   Search,
   Shield,
   Star,
   Trophy,
+  Users,
 } from 'lucide-react'
 import Logo from './Logo'
+import SocialLinks from './SocialLinks'
 import ReloadLink from '@/components/ReloadLink'
 import { useLangContext } from '@/providers/LangProvider'
 
 /**
  * Site footer with grouped navigation columns. Each link gets its own icon so
  * the layout stops looking like a wall of plain text + a single logo.
+ *
+ * The big call-to-action is the brand-coloured Discord + Facebook buttons —
+ * they sit ABOVE the link grid so even mobile users see them on first scroll.
  */
 export default function Footer() {
   const { t, lang } = useLangContext()
@@ -32,6 +39,7 @@ export default function Footer() {
         { to: '/', label: t.home, icon: Home },
         { to: '/search', label: t.browse, icon: Search },
         { to: '/season', label: t.seasonNav, icon: Star },
+        { to: '/schedule', label: t.scheduleNav, icon: Calendar },
       ],
     },
     {
@@ -39,24 +47,36 @@ export default function Footer() {
       icon: Heart,
       links: [
         { to: '/ranking', label: t.rankingNav, icon: Trophy },
-        { to: '/schedule', label: t.scheduleNav, icon: Calendar },
         { to: '/library', label: t.libraryNav, icon: BookOpen },
+        { to: '/collections', label: lang === 'vi' ? 'Bộ sưu tập' : 'Collections', icon: BookmarkPlus },
+        { to: '/compare', label: lang === 'vi' ? 'So sánh' : 'Compare', icon: GitCompareArrows },
+        { to: '/activity', label: lang === 'vi' ? 'Hoạt động' : 'Activity Feed', icon: Users },
       ],
     },
     {
       title: lang === 'vi' ? 'Pháp lý' : 'Legal',
       icon: Shield,
-      links: [{ to: '/tos', label: lang === 'vi' ? 'Điều khoản' : 'Terms of Service', icon: Shield }],
+      links: [
+        { to: '/tos', label: lang === 'vi' ? 'Điều khoản' : 'Terms of Service', icon: Shield },
+      ],
     },
   ]
 
   return (
     <footer className="mt-auto border-t border-border bg-card py-12">
       <div className="container mx-auto px-4">
-        {/* Brand block */}
+        {/* Brand block + community CTA */}
         <div className="mb-10 flex flex-col items-center text-center">
           <Logo size={48} />
           <p className="mt-4 max-w-md text-sm text-text-muted">{t.footerTagline}</p>
+
+          {/* Big community CTA — Discord + Facebook */}
+          <div className="mt-6">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              {lang === 'vi' ? 'Tham gia cộng đồng' : 'Join the community'}
+            </p>
+            <SocialLinks />
+          </div>
         </div>
 
         {/* Link grid */}

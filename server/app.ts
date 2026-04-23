@@ -17,6 +17,8 @@ import searchRoutes from './routes/search.js'
 import translateRoutes from './routes/translate.js'
 import seasonRoutes from './routes/season.js'
 import scheduleRoutes from './routes/schedule.js'
+import imageRoutes from './routes/image.js'
+import adminRoutes from './routes/admin.js'
 
 // load env
 dotenv.config()
@@ -38,6 +40,8 @@ app.use('/api/search', searchRoutes)
 app.use('/api/translate', translateRoutes)
 app.use('/api/season', seasonRoutes)
 app.use('/api/schedule', scheduleRoutes)
+app.use('/api/image', imageRoutes)
+app.use('/api/admin', adminRoutes)
 
 /**
  * health

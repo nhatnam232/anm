@@ -23,6 +23,7 @@ import AuthModal from '@/components/AuthModal'
 import ReloadLink from '@/components/ReloadLink'
 import SpotifyEmbed from '@/components/SpotifyEmbed'
 import UserAvatar from '@/components/UserAvatar'
+import QuestsPanel from '@/components/QuestsPanel'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -762,11 +763,18 @@ export default function Profile() {
               </div>
             )
           ) : !activityList || activityList.length === 0 ? (
-            <EmptyHistory
-              icon={<BookOpen className="h-10 w-10 text-text-muted/40" />}
-              title={t.noActivityForStatus(localizeWatchStatus(activeTab, lang))}
-              hint={lang === 'vi' ? 'Thêm anime vào thư viện từ trang chi tiết' : 'Add anime to your library from any anime page'}
-            />
+            <>
+              {/* Show quests panel here too so the empty state still gives the
+                  user something to do (gamification CTA). */}
+              <div className="mb-4">
+                <QuestsPanel />
+              </div>
+              <EmptyHistory
+                icon={<BookOpen className="h-10 w-10 text-text-muted/40" />}
+                title={t.noActivityForStatus(localizeWatchStatus(activeTab, lang))}
+                hint={lang === 'vi' ? 'Thêm anime vào thư viện từ trang chi tiết' : 'Add anime to your library from any anime page'}
+              />
+            </>
           ) : (
             <div className="space-y-2">
               {activityList.map((entry) => (
@@ -813,6 +821,11 @@ export default function Profile() {
             </div>
           )}
         </section>
+
+        {/* Always-visible quests panel (sticky reminder of progress) */}
+        <div className="mt-8">
+          <QuestsPanel />
+        </div>
       </div>
     </Layout>
   )

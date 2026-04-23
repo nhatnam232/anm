@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="yRfIAHAD9fwynR62WNA07uv6yo1l67ubmiL_c0HRLEQ" />
     <title>Anime Wiki</title>
+    <!-- PWA: makes "Add to Home Screen" work on Android/iOS -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#7c3aed" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#7c3aed" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Anime Wiki" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <!--
       Theme bootstrap — runs synchronously BEFORE the React bundle so the page
       never shows a wrong-theme flash for the first paint.

@@ -15,6 +15,7 @@ import {
   Film,
   Radio,
   Globe,
+  PencilLine,
   PlayCircle,
   Music2,
   Search,
@@ -33,6 +34,8 @@ import { useManualTranslation } from '@/hooks/useManualTranslation'
 import CommentSection from '@/components/CommentSection'
 import AddToLibraryButton from '@/components/AddToLibraryButton'
 import AuthModal from '@/components/AuthModal'
+import SuggestEditModal from '@/components/SuggestEditModal'
+import SEO, { buildAnimeJsonLd } from '@/components/SEO'
 import { useLangContext } from '@/providers/LangProvider'
 import { cleanDuration, cleanEpisodeCount, localizeGenre, localizeSeason, localizeStatus, orUnknown } from '@/lib/formatters'
 
@@ -54,6 +57,7 @@ export default function AnimeDetail() {
   const [error, setError] = useState<string | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [charSearch, setCharSearch] = useState('')
+  const [suggestEditOpen, setSuggestEditOpen] = useState(false)
   const like = useAnimeLike(
     anime
       ? {
@@ -200,6 +204,23 @@ export default function AnimeDetail() {
 
   return (
     <Layout>
+      <SEO
+        title={anime.title}
+        description={(anime.synopsis ?? '').slice(0, 200)}
+        image={anime.banner_image || anime.cover_image}
+        type="article"
+        jsonLd={buildAnimeJsonLd({
+          id: anime.id,
+          title: anime.title,
+          cover_image: anime.cover_image,
+          synopsis: anime.synopsis,
+          score: anime.score,
+          episodes: anime.episodes,
+          status: anime.status,
+          studio_name: anime.studio_name,
+          aired_from: anime.aired_from,
+        })}
+      />
       <HeroArtwork
         bannerImage={anime.banner_image}
         coverImage={anime.cover_image}
@@ -248,6 +269,22 @@ export default function AnimeDetail() {
                   animeEpisodes={anime.episodes ?? null}
                   onAuthRequired={() => setAuthOpen(true)}
                 />
+
+                {/* Prominent "Suggest edit" CTA — anyone signed-in can submit a
+                    correction; trusted users (active, top_fan, mod, admin,
+                    owner) get auto-approved by the DB trigger. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!anime) return
+                    setSuggestEditOpen(true)
+                  }}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+                  title={lang === 'vi' ? 'Đề xuất chỉnh sửa thông tin anime này' : 'Suggest an edit for this anime'}
+                >
+                  <PencilLine className="h-4 w-4" />
+                  {lang === 'vi' ? 'Đề xuất chỉnh sửa' : 'Suggest edit'}
+                </button>
               </div>
             </div>
 
@@ -773,6 +810,16 @@ export default function AnimeDetail() {
         </div>
       </div>
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <SuggestEditModal
+        open={suggestEditOpen}
+        onClose={() => setSuggestEditOpen(false)}
+        anime={{
+          id: anime.id,
+          title: anime.title,
+          synopsis: anime.synopsis,
+          trailer_url: anime.trailer_url,
+        }}
+      />
     </Layout>
   )
 }

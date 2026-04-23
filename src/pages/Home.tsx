@@ -6,6 +6,7 @@ import AuthModal from '@/components/AuthModal'
 import HeroArtwork from '@/components/HeroArtwork'
 import Layout from '@/components/Layout'
 import ReloadLink from '@/components/ReloadLink'
+import RecommendedForYou from '@/components/RecommendedForYou'
 import { fetchAnimeList, fetchFeaturedAnime } from '@/lib/api'
 import { useAutoTranslation } from '@/hooks/useAutoTranslation'
 import { useLangContext } from '@/providers/LangProvider'
@@ -185,6 +186,9 @@ export default function Home() {
             <div className="absolute inset-0 animate-pulse bg-card" />
           )}
         </section>
+
+        {/* Personalised picks for signed-in users (no-op for guests). */}
+        <RecommendedForYou onAuthRequired={() => setAuthOpen(true)} />
 
         <section className="container mx-auto max-w-7xl px-4 py-12">
           <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">

@@ -83,6 +83,37 @@
   :root.light .placeholder-gray-600::placeholder {
     color: rgb(148 163 184);
   }
+
+  /*
+   * CONTRAST FIX (light mode):
+   * Tons of legacy elements use `text-white` for headings, anime titles, hero
+   * text, etc. — that becomes white-on-white in light mode and disappears.
+   * We force any text-white that ISN'T over a colored backdrop (primary,
+   * gradient, hero image, dark overlay) back to slate-900 so the title is
+   * always readable.
+   *
+   * Opt-out: add the `keep-white-on-light` class to any element that you
+   * intentionally want to stay white in light mode (e.g. text on top of a
+   * banner image with its own dark gradient).
+   */
+  :root.light .text-white:not(.keep-white-on-light):not(.bg-primary):not(.bg-primary-hover) {
+    color: rgb(15 23 42);
+  }
+  /* Keep text-white on buttons / pills that have a dark/colored background */
+  :root.light .bg-primary .text-white,
+  :root.light .bg-primary-hover .text-white,
+  :root.light .bg-red-500 .text-white,
+  :root.light .bg-red-500\/10 .text-white,
+  :root.light button.bg-primary,
+  :root.light .bg-gradient-to-r .text-white,
+  :root.light [class*="bg-gradient"] .text-white {
+    color: rgb(255 255 255);
+  }
+  /* AnimeCard hover overlay always sits over a dark image gradient */
+  :root.light .group:hover .text-white,
+  :root.light a:hover .text-white {
+    color: rgb(255 255 255);
+  }
 }
 
 :root {

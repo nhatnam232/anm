@@ -5,6 +5,7 @@ import Layout from '@/components/Layout'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import SEO from '@/components/SEO'
 import ReloadLink from '@/components/ReloadLink'
+import AdminPasswordGate from '@/components/AdminPasswordGate'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -34,6 +35,16 @@ type Suggestion = {
  * UI is intentionally minimal — power users want speed, not eye-candy.
  */
 export default function AdminDashboard() {
+  return (
+    <Layout>
+      <AdminPasswordGate>
+        <AdminDashboardInner />
+      </AdminPasswordGate>
+    </Layout>
+  )
+}
+
+function AdminDashboardInner() {
   const { lang } = useLangContext()
   const { profile, loading } = useAuth()
   const toast = useToast()
@@ -95,42 +106,38 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="container mx-auto max-w-3xl px-4 py-16">
-          <div className="h-32 animate-pulse rounded-2xl border border-border bg-card" />
-        </div>
-      </Layout>
+      <div className="container mx-auto max-w-3xl px-4 py-16">
+        <div className="h-32 animate-pulse rounded-2xl border border-border bg-card" />
+      </div>
     )
   }
 
   if (!allowed) {
     return (
-      <Layout>
-        <div className="container mx-auto max-w-2xl px-4 py-20 text-center">
-          <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-text-muted/50" />
-          <h1 className="mb-2 text-2xl font-bold text-text">
-            {lang === 'vi' ? 'Khu vực chỉ dành cho Mod' : 'Moderators only'}
-          </h1>
-          <p className="mb-6 text-sm text-text-muted">
-            {lang === 'vi'
-              ? 'Bạn cần vai trò Mod, Admin hoặc Owner để truy cập trang này.'
-              : 'You need the Mod, Admin or Owner role to access this page.'}
-          </p>
-          <ReloadLink
-            to="/"
-            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-          >
-            {lang === 'vi' ? 'Về trang chủ' : 'Back home'}
-          </ReloadLink>
-        </div>
-      </Layout>
+      <div className="container mx-auto max-w-2xl px-4 py-20 text-center">
+        <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-text-muted/50" />
+        <h1 className="mb-2 text-2xl font-bold text-text">
+          {lang === 'vi' ? 'Khu vực chỉ dành cho Mod' : 'Moderators only'}
+        </h1>
+        <p className="mb-6 text-sm text-text-muted">
+          {lang === 'vi'
+            ? 'Bạn cần vai trò Mod, Admin hoặc Owner để truy cập trang này.'
+            : 'You need the Mod, Admin or Owner role to access this page.'}
+        </p>
+        <ReloadLink
+          to="/"
+          className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+        >
+          {lang === 'vi' ? 'Về trang chủ' : 'Back home'}
+        </ReloadLink>
+      </div>
     )
   }
 
   const items = pendingQ.data ?? []
 
   return (
-    <Layout>
+    <>
       <SEO
         title={lang === 'vi' ? 'Quản trị' : 'Admin'}
         noIndex
@@ -268,6 +275,6 @@ export default function AdminDashboard() {
           </ul>
         )}
       </div>
-    </Layout>
+    </>
   )
 }

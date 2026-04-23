@@ -18,8 +18,12 @@ import BrowsePage from '@/pages/BrowsePage'
 import ComparePage from '@/pages/ComparePage'
 import CollectionsPage from '@/pages/CollectionsPage'
 import AdminDashboard from '@/pages/AdminDashboard'
+import ActivityFeed from '@/pages/ActivityFeed'
+import Login from '@/pages/Login'
 import TosModal from '@/components/TosModal'
 import SpotifyMiniPlayer from '@/components/SpotifyMiniPlayer'
+import PWAInstaller from '@/components/PWAInstaller'
+import CommandPalette, { useCommandPaletteShortcut } from '@/components/CommandPalette'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { LangProvider } from '@/providers/LangProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
@@ -47,6 +51,7 @@ export default function App() {
                         <Route path="/studio/:id" element={<Studio />} />
                         <Route path="/search" element={<SearchResults />} />
                         <Route path="/auth/callback" element={<AuthCallback />} />
+                        <Route path="/login" element={<Login />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/profile/:userId" element={<Profile />} />
                         <Route path="/schedule" element={<AnimeCalendar />} />
@@ -55,6 +60,7 @@ export default function App() {
                         <Route path="/season" element={<SeasonChart />} />
                         <Route path="/compare" element={<ComparePage />} />
                         <Route path="/collections" element={<CollectionsPage />} />
+                        <Route path="/activity" element={<ActivityFeed />} />
                         <Route path="/admin" element={<AdminDashboard />} />
                         <Route path="/tos" element={<ToS />} />
                         <Route path="/browse" element={<BrowsePage />} />
@@ -62,6 +68,10 @@ export default function App() {
                       </Routes>
                       {/* Floating global mini-player so Spotify keeps playing across pages */}
                       <SpotifyMiniPlayer />
+                      {/* PWA install prompt + service worker registration */}
+                      <PWAInstaller />
+                      {/* Ctrl+K command palette mounted at root */}
+                      <GlobalCommandPalette />
                     </Router>
                   </NowPlayingProvider>
                 </NotificationsProvider>
@@ -72,4 +82,14 @@ export default function App() {
       </QueryClientProvider>
     </HelmetProvider>
   )
+}
+
+/**
+ * Tiny wrapper so the Ctrl+K shortcut hook can mount inside the Router context
+ * (which it doesn't strictly need, but keeping it inside means future
+ * useNavigate() calls inside the palette work without prop-drilling).
+ */
+function GlobalCommandPalette() {
+  const [open, setOpen] = useCommandPaletteShortcut()
+  return <CommandPalette open={open} onClose={() => setOpen(false)} />
 }

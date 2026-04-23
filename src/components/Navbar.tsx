@@ -20,11 +20,12 @@ import {
 } from 'lucide-react'
 
 import Logo from './Logo'
-import AuthModal from './AuthModal'
 import LangSwitcher, { LangIcon } from './LangSwitcher'
 import ThemeToggle from './ThemeToggle'
 import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
+import SocialLinks from './SocialLinks'
+import CommandPalette from './CommandPalette'
 import ReloadLink from '@/components/ReloadLink'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
@@ -135,7 +136,7 @@ export default function Navbar() {
   const { t, lang, setLang } = useLangContext()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [authOpen, setAuthOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [exploreOpen, setExploreOpen] = useState(false)
   const [langModalOpen, setLangModalOpen] = useState(false)
@@ -494,14 +495,16 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setAuthOpen(true)}
-                  disabled={!configured}
-                  className="flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                <ReloadLink
+                  to={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                  className={`flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover ${!configured ? 'pointer-events-none opacity-50' : ''}`}
                 >
                   <UserIcon className="h-4 w-4" /> {t.signIn}
-                </button>
+                </ReloadLink>
               )}
+
+              {/* Compact social links — Discord + Facebook always 2 clicks away */}
+              <SocialLinks compact className="ml-1 border-l border-border pl-2" />
             </div>
 
             {/* Mobile: theme + bell + lang + hamburger */}
@@ -509,6 +512,15 @@ export default function Navbar() {
               <ThemeToggle compact />
               {user && <NotificationBell />}
               {renderLanguageButton(true)}
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Open command palette"
+                title="Search (Ctrl+K)"
+                className="rounded-full p-1.5 text-text-muted transition-colors hover:bg-surface hover:text-text"
+              >
+                <Search className="h-5 w-5" />
+              </button>
               <button
                 className="text-text-muted transition-colors hover:text-text"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -608,17 +620,20 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false)
-                      setAuthOpen(true)
-                    }}
-                    disabled={!configured}
-                    className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  <ReloadLink
+                    to={`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white ${!configured ? 'pointer-events-none opacity-50' : ''}`}
                   >
                     <UserIcon className="h-4 w-4" /> {t.signIn}
-                  </button>
+                  </ReloadLink>
                 )}
+
+                {/* Mobile community CTA */}
+                <div className="my-2 border-t border-border" />
+                <div className="flex justify-center px-3">
+                  <SocialLinks />
+                </div>
               </div>
             </div>
           )}
@@ -697,7 +712,8 @@ export default function Navbar() {
         </div>
       )}
 
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      {/* Global Ctrl+K command palette */}
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
   )
 }
