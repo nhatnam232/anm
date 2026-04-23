@@ -3,8 +3,10 @@ import { BookOpen, Sparkles, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
 import { listCharacters, listStories } from '@/wiki/registry'
 import { stripWikiTags } from '@/wiki/utils/parser'
+import { useWikiText } from '@/wiki/i18n'
 
 export default function WikiHome() {
+  const t = useWikiText()
   const characters = listCharacters()
   const stories = listStories()
 
@@ -14,16 +16,12 @@ export default function WikiHome() {
       <section className="mb-10 rounded-3xl border border-border bg-card/70 p-8">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary">
           <Sparkles className="h-3.5 w-3.5" />
-          Community-curated lore
+          {t.communityCurated}
         </div>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-text sm:text-4xl">
-          Fandom Wiki — Tóm tắt thế giới
+          {t.homeTitle}
         </h1>
-        <p className="mt-3 max-w-2xl text-sm text-text-muted">
-          Toàn bộ tiểu sử nhân vật, cốt truyện và các mối liên kết được người
-          dùng đóng góp. Click vào bất kỳ tên nhân vật nào trong văn bản để
-          mở thẻ preview hoặc nhảy thẳng tới trang tiểu sử.
-        </p>
+        <p className="mt-3 max-w-2xl text-sm text-text-muted">{t.homeSubtitle}</p>
       </section>
 
       {/* Top characters */}
@@ -31,9 +29,9 @@ export default function WikiHome() {
         <div className="mb-4 flex items-end justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold text-text">
             <Users className="h-5 w-5 text-primary" />
-            Nhân vật nổi bật
+            {t.topCharacters}
           </h2>
-          <span className="text-xs text-text-muted">{characters.length} nhân vật</span>
+          <span className="text-xs text-text-muted">{t.charactersCount(characters.length)}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {characters.map((c) => (
@@ -64,9 +62,9 @@ export default function WikiHome() {
         <div className="mb-4 flex items-end justify-between">
           <h2 className="flex items-center gap-2 text-xl font-bold text-text">
             <BookOpen className="h-5 w-5 text-primary" />
-            Cốt truyện & Lore
+            {t.storiesAndLore}
           </h2>
-          <span className="text-xs text-text-muted">{stories.length} bài viết</span>
+          <span className="text-xs text-text-muted">{t.storiesCount(stories.length)}</span>
         </div>
         <ul className="space-y-3">
           {stories.map((s) => (
@@ -93,7 +91,7 @@ export default function WikiHome() {
                   </p>
                   {s.characterIds && s.characterIds.length > 0 && (
                     <p className="mt-2 text-[11px] text-text-muted">
-                      {s.characterIds.length} nhân vật xuất hiện
+                      {t.charactersCount(s.characterIds.length)}
                     </p>
                   )}
                 </div>

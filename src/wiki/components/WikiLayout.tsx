@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, BookMarked, Search } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { searchCharacters } from '@/wiki/registry'
+import { useWikiText } from '@/wiki/i18n'
 import type { WikiCharacter } from '@/wiki/types'
 
 type Props = {
@@ -19,6 +20,7 @@ type Props = {
  *   - Big global omnibar (defaults to character search).
  */
 export default function WikiLayout({ children, showSearch = true }: Props) {
+  const t = useWikiText()
   const [q, setQ] = useState('')
   const [results, setResults] = useState<WikiCharacter[]>([])
   const [open, setOpen] = useState(false)
@@ -58,7 +60,7 @@ export default function WikiLayout({ children, showSearch = true }: Props) {
             <span className="flex items-center gap-1.5 text-sm font-extrabold tracking-tight">
               <BookMarked className="h-4 w-4 text-primary" />
               <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
-                Fandom Wiki
+                {t.fandomWiki}
               </span>
             </span>
           </Link>
@@ -70,7 +72,7 @@ export default function WikiLayout({ children, showSearch = true }: Props) {
                 value={q}
                 onChange={(e) => { setQ(e.target.value); setOpen(true) }}
                 onFocus={() => setOpen(true)}
-                placeholder="Tìm nhân vật trong wiki..."
+                placeholder={t.searchPlaceholder}
                 className="w-full rounded-full border border-border bg-background py-2.5 pl-11 pr-4 text-sm text-text shadow-inner focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
               {open && results.length > 0 && (
@@ -102,7 +104,7 @@ export default function WikiLayout({ children, showSearch = true }: Props) {
               )}
               {open && q.trim().length > 0 && results.length === 0 && (
                 <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-border bg-card px-3 py-3 text-xs text-text-muted shadow-2xl">
-                  Không có nhân vật nào khớp "{q}". Có thể chưa được thêm vào wiki.
+                  {t.noResults(q)}
                 </div>
               )}
             </div>
@@ -113,7 +115,7 @@ export default function WikiLayout({ children, showSearch = true }: Props) {
       <main className="container mx-auto px-4 py-8">{children}</main>
 
       <footer className="mt-16 border-t border-border bg-card/40 py-6 text-center text-xs text-text-muted">
-        Fandom Wiki · Anime Wiki community contributions
+        {t.fandomWiki} · Anime Wiki community contributions
       </footer>
     </div>
   )

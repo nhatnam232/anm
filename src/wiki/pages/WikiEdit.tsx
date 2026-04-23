@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
 import { getCharacter, getStory } from '@/wiki/registry'
+import { useWikiText } from '@/wiki/i18n'
 
 /**
  * Wiki edit page — supports `/edit/character/:id` and `/edit/story/:id`.
@@ -32,6 +33,7 @@ export default function WikiEdit() {
   const kind = params.kind as 'character' | 'story' | undefined
   const id = params.id ?? ''
   const navigate = useNavigate()
+  const t = useWikiText()
 
   const target =
     kind === 'character' ? getCharacter(id) : kind === 'story' ? getStory(id) : null
@@ -69,10 +71,10 @@ export default function WikiEdit() {
       <WikiLayout showSearch={false}>
         <div className="rounded-3xl border border-border bg-card p-12 text-center">
           <p className="text-lg font-semibold text-text">
-            Không tìm thấy {kind === 'story' ? 'story' : 'character'} "{id}"
+            {kind === 'story' ? t.notFoundStory(id) : t.notFoundCharacter(id)}
           </p>
           <Link to="/wiki" className="mt-4 inline-block text-sm text-primary hover:underline">
-            ← Về trang chủ Wiki
+            {t.backToWikiHome}
           </Link>
         </div>
       </WikiLayout>
@@ -89,7 +91,6 @@ export default function WikiEdit() {
   const handleSubmit = () => {
     if (!editor) return
     setSubmitted(true)
-    // In a real implementation, post to Supabase here.
     setTimeout(() => navigate(`/wiki/${kind}/${id}`), 1200)
   }
 
@@ -106,10 +107,10 @@ export default function WikiEdit() {
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-text-muted hover:border-primary hover:text-text"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to {kind}
+          {t.backToWikiHome}
         </Link>
         <h1 className="text-lg font-bold text-text">
-          ✏️ Editing: <span className="text-primary">{titleLabel}</span>
+          {t.editing}: <span className="text-primary">{titleLabel}</span>
         </h1>
       </div>
 
@@ -119,25 +120,25 @@ export default function WikiEdit() {
           <ToolbarBtn
             onClick={() => editor?.chain().focus().toggleBold().run()}
             active={editor?.isActive('bold')}
-            label="Bold"
+            label={t.bold}
             icon={<Bold className="h-3.5 w-3.5" />}
           />
           <ToolbarBtn
             onClick={() => editor?.chain().focus().toggleItalic().run()}
             active={editor?.isActive('italic')}
-            label="Italic"
+            label={t.italic}
             icon={<Italic className="h-3.5 w-3.5" />}
           />
           <ToolbarBtn
             onClick={() => editor?.chain().focus().toggleStrike().run()}
             active={editor?.isActive('strike')}
-            label="Strike"
+            label={t.strike}
             icon={<Strikethrough className="h-3.5 w-3.5" />}
           />
           <span className="mx-1 h-6 w-px bg-border" />
           <ToolbarBtn
             onClick={insertCharacterLink}
-            label="Insert character link"
+            label={t.insertLink}
             icon={<LinkIcon className="h-3.5 w-3.5" />}
           />
         </div>
@@ -147,13 +148,13 @@ export default function WikiEdit() {
         {/* Edit summary — like a Wikipedia "edit summary" / GitHub commit msg */}
         <div className="mt-5">
           <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Tóm tắt nội dung bạn vừa sửa
+            {t.editSummaryLabel}
           </label>
           <input
             type="text"
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            placeholder="Vd: Sửa năm sinh nhân vật, thêm liên kết tới Himmel..."
+            placeholder={t.editSummaryPlaceholder}
             maxLength={120}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
           />
@@ -165,7 +166,7 @@ export default function WikiEdit() {
             to={`/wiki/${kind}/${id}`}
             className="rounded-full border border-border px-4 py-2 text-sm text-text-muted hover:border-primary hover:text-text"
           >
-            Huỷ
+            {t.cancel}
           </Link>
           <button
             type="button"
@@ -176,12 +177,12 @@ export default function WikiEdit() {
             {submitted ? (
               <>
                 <CheckCircle2 className="h-4 w-4" />
-                Đã gửi!
+                {t.submitted}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Submit for Review
+                {t.submitForReview}
               </>
             )}
           </button>
