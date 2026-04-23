@@ -4,11 +4,9 @@ import {
   BookmarkPlus,
   BookOpen,
   Calendar,
-  Check,
   ChevronDown,
   Compass,
   GitCompareArrows,
-  Globe2,
   LogOut,
   Menu,
   Search,
@@ -20,11 +18,9 @@ import {
 } from 'lucide-react'
 
 import Logo from './Logo'
-import LangSwitcher, { LangIcon } from './LangSwitcher'
-import ThemeToggle from './ThemeToggle'
 import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
-import SocialLinks from './SocialLinks'
+import SettingsMenu from './SettingsMenu'
 import CommandPalette from './CommandPalette'
 import ReloadLink from '@/components/ReloadLink'
 import { useAuth } from '@/providers/AuthProvider'
@@ -38,8 +34,6 @@ import {
   type BadgeId,
 } from '@/lib/badges'
 
-import type { Lang } from '@/lib/i18n'
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SuggestionItem {
@@ -49,13 +43,6 @@ interface SuggestionItem {
   score: number | null
   type: string
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const LANGUAGE_OPTIONS: Array<{ value: Lang }> = [
-  { value: 'vi' },
-  { value: 'en' },
-]
 
 // ─── Autocomplete Suggestion Popup ───────────────────────────────────────────
 
@@ -133,13 +120,12 @@ function SuggestionPopup({ suggestions, loading, query, onSelect, onViewAll, lan
 // ─── Main Navbar ──────────────────────────────────────────────────────────────
 
 export default function Navbar() {
-  const { t, lang, setLang } = useLangContext()
+  const { t, lang } = useLangContext()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [exploreOpen, setExploreOpen] = useState(false)
-  const [langModalOpen, setLangModalOpen] = useState(false)
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -210,7 +196,6 @@ export default function Navbar() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setLangModalOpen(false)
         setUserMenuOpen(false)
         setExploreOpen(false)
         setIsMenuOpen(false)
@@ -220,14 +205,6 @@ export default function Navbar() {
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
-
-  useEffect(() => {
-    if (langModalOpen) {
-      document.body.style.overflow = 'hidden'
-      return () => { document.body.style.overflow = '' }
-    }
-    return undefined
-  }, [langModalOpen])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -256,22 +233,6 @@ export default function Navbar() {
   const displayName =
     profile?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You'
   const avatar = profile?.avatar_url || user?.user_metadata?.avatar_url || null
-  const currentLanguageLabel = lang === 'vi' ? t.vietnamese : t.english
-
-  const handleLanguageChange = (nextLang: Lang) => {
-    setLang(nextLang)
-    setLangModalOpen(false)
-    setIsMenuOpen(false)
-  }
-
-  const renderLanguageButton = (compact = false) => (
-    <LangSwitcher
-      lang={lang}
-      label={currentLanguageLabel}
-      compact={compact}
-      onClick={() => setLangModalOpen(true)}
-    />
-  )
 
   const viewerIsMod = isModerator(profile)
 
@@ -447,11 +408,12 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right side: theme + bell + lang + user */}
+            {/* Right side (desktop) — combined SettingsMenu + bell + user.
+                One settings cog replaces the old Theme + Lang + Discord + FB
+                cluster, drastically reducing visual noise. */}
             <div className="hidden items-center gap-2 md:flex">
-              <ThemeToggle />
               {user && <NotificationBell />}
-              {renderLanguageButton()}
+              <SettingsMenu />
 
               {user ? (
                 <div className="relative" ref={userMenuRef}>
@@ -502,16 +464,12 @@ export default function Navbar() {
                   <UserIcon className="h-4 w-4" /> {t.signIn}
                 </ReloadLink>
               )}
-
-              {/* Compact social links — Discord + Facebook always 2 clicks away */}
-              <SocialLinks compact className="ml-1 border-l border-border pl-2" />
             </div>
 
-            {/* Mobile: theme + bell + lang + hamburger */}
+            {/* Mobile: notif + settings cog + search + hamburger */}
             <div className="flex items-center gap-1.5 md:hidden">
-              <ThemeToggle compact />
               {user && <NotificationBell />}
-              {renderLanguageButton(true)}
+              <SettingsMenu compact />
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
@@ -628,89 +586,11 @@ export default function Navbar() {
                     <UserIcon className="h-4 w-4" /> {t.signIn}
                   </ReloadLink>
                 )}
-
-                {/* Mobile community CTA */}
-                <div className="my-2 border-t border-border" />
-                <div className="flex justify-center px-3">
-                  <SocialLinks />
-                </div>
               </div>
             </div>
           )}
         </div>
       </nav>
-
-      {/* Language modal */}
-      {langModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-          <button
-            type="button"
-            aria-label={t.close}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
-            onClick={() => setLangModalOpen(false)}
-          />
-          <div className="surface-float relative z-10 w-full max-w-md overflow-hidden rounded-[28px] border border-border bg-card shadow-2xl">
-            <div className="border-b border-border bg-gradient-to-r from-primary/20 via-sky-500/10 to-emerald-400/10 px-6 py-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 text-sm text-primary">
-                    <Globe2 className="h-4 w-4" />
-                    {t.language}
-                  </div>
-                  <h2 className="mt-2 text-2xl font-bold text-text">{t.chooseLanguage}</h2>
-                  <p className="mt-1 text-sm text-text-muted">
-                    {t.currentLanguage}: {currentLanguageLabel}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setLangModalOpen(false)}
-                  className="rounded-full border border-border p-2 text-text-muted transition-colors hover:border-primary hover:text-text"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 px-5 py-5">
-              {LANGUAGE_OPTIONS.map((option) => {
-                const isActive = option.value === lang
-                const label = option.value === 'vi' ? t.vietnamese : t.english
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleLanguageChange(option.value)}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all ${
-                      isActive
-                        ? 'border-primary bg-primary/10 text-text'
-                        : 'border-border bg-surface text-text hover:border-primary/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <LangIcon lang={option.value} size={36} />
-                      <div>
-                        <div className="font-semibold">{label}</div>
-                        <div className="text-sm text-text-muted">
-                          {isActive ? t.currentLanguage : t.languageChangedTo(label)}
-                        </div>
-                      </div>
-                    </div>
-                    <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        isActive ? 'bg-primary text-white' : 'bg-surface text-text-muted'
-                      }`}
-                    >
-                      {isActive ? <Check className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 rotate-[-90deg]" />}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Global Ctrl+K command palette */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
