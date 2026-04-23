@@ -3,7 +3,8 @@ import { Copy, KeyRound, Loader2, Lock, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
-import { isOwner } from '@/lib/badges'
+import { isAdmin, isModerator } from '@/lib/badges'
+import { DISCORD_INVITE } from '@/components/SocialLinks'
 
 const TOKEN_STORAGE_KEY = 'anm-admin-gate-ok'
 
@@ -16,15 +17,19 @@ type Props = {
  *   1. Must be signed in with mod/admin/owner badge (enforced in DB anyway).
  *   2. Must enter today's daily-rotated admin password.
  *
- * The plaintext password is sent ONLY to the Discord webhook configured in
- * env. Once the user enters it correctly, we cache a tiny "ok" flag in
+ * The plaintext password is announced on Discord (dsc.gg/animewiki) once a
+ * day. Once the user enters it correctly, we cache a tiny "ok" flag in
  * sessionStorage that auto-expires when the tab is closed.
  *
- * For owners, an extra "Generate today's password" button calls the
+ * For admin/owner, an extra "Generate today's password" button calls the
  * `rotate_admin_password()` RPC directly so:
- *   • You can bootstrap the gate without configuring a webhook.
+ *   • You can bootstrap the gate without configuring a webhook (first-time setup).
  *   • You can recover if you missed the Discord notification.
  *   • The plaintext is shown EXACTLY ONCE, then cleared from React state.
+ *
+ * The DB function `rotate_admin_password()` enforces the actual permission
+ * check (only owner/admin badges are allowed), so even mods seeing the
+ * button will get a clear error message rather than locking real owners out.
  */
 export default function AdminPasswordGate({ children }: Props) {
   const { user, profile } = useAuth()
@@ -61,7 +66,7 @@ export default function AdminPasswordGate({ children }: Props) {
   }
 
   // Hide rather than soft-deny when the viewer isn't even mod (defense in depth):
-  if (!profile?.badges?.some((b) => b === 'mod' || b === 'admin' || b === 'owner')) {
+  if (!isModerator(profile)) {
     return (
       <div className="container mx-auto max-w-md px-4 py-20 text-center">
         <Lock className="mx-auto h-10 w-10 text-red-400" />
@@ -78,6 +83,8 @@ export default function AdminPasswordGate({ children }: Props) {
   }
 
   if (unlocked) return <>{children}</>
+
+  const canGenerate = isAdmin(profile)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,8 +106,8 @@ export default function AdminPasswordGate({ children }: Props) {
       } else {
         setError(
           lang === 'vi'
-            ? 'Mật khẩu không đúng. Hãy kiểm tra Discord webhook hoặc nhờ owner sinh lại.'
-            : 'Wrong password. Check Discord webhook or ask owner to regenerate.',
+            ? 'Mật khẩu không đúng. Hãy kiểm tra Discord (dsc.gg/animewiki) hoặc nhờ admin/owner sinh lại.'
+            : 'Wrong password. Check Discord (dsc.gg/animewiki) or ask an admin/owner to regenerate.',
         )
       }
     } catch (err: any) {
@@ -113,7 +120,7 @@ export default function AdminPasswordGate({ children }: Props) {
 
   const handleGenerate = async () => {
     if (!supabase) return
-    if (!isOwner(profile)) return
+    if (!canGenerate) return
     setError(null)
     setGenerating(true)
     try {
@@ -148,14 +155,36 @@ export default function AdminPasswordGate({ children }: Props) {
               {lang === 'vi' ? 'Cổng quản trị' : 'Admin Gate'}
             </h1>
             <p className="text-xs text-text-muted">
-              {lang === 'vi'
-                ? 'Yêu cầu mật khẩu hôm nay (gửi qua Discord)'
-                : 'Today\'s password required (sent via Discord)'}
+              {lang === 'vi' ? (
+                <>
+                  Mật khẩu hôm nay được gửi qua{' '}
+                  <a
+                    href={DISCORD_INVITE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Discord (dsc.gg/animewiki)
+                  </a>
+                </>
+              ) : (
+                <>
+                  Today&apos;s password is announced on{' '}
+                  <a
+                    href={DISCORD_INVITE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Discord (dsc.gg/animewiki)
+                  </a>
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        {/* Plaintext-once panel — shown right after the owner clicks Generate */}
+        {/* Plaintext-once panel — shown right after the admin clicks Generate */}
         {generatedPassword && (
           <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
@@ -214,13 +243,14 @@ export default function AdminPasswordGate({ children }: Props) {
           </button>
         </form>
 
-        {/* Owner-only escape hatch */}
-        {isOwner(profile) && (
+        {/* Admin/Owner escape hatch — also serves as the "first time setup"
+            button when no password exists yet in the database. */}
+        {canGenerate && (
           <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
             <p className="mb-2 text-xs text-amber-200">
               {lang === 'vi'
-                ? '⚠️ Owner: nếu chưa cấu hình Discord webhook hoặc bỏ lỡ thông báo, bạn có thể sinh mật khẩu mới ngay (sẽ ghi đè mật khẩu hôm nay).'
-                : '⚠️ Owner: if Discord webhook isn\'t set up yet or you missed the notification, you can generate today\'s password right here (overwrites the current one).'}
+                ? '⚠️ Admin/Owner: nếu đây là lần đầu thiết lập, hoặc bạn lỡ thông báo Discord, bấm để sinh mật khẩu hôm nay (sẽ ghi đè mật khẩu cũ nếu có).'
+                : '⚠️ Admin/Owner: if this is the first setup, or you missed the Discord announcement, click to generate today\'s password (overwrites any existing one).'}
             </p>
             <button
               type="button"
