@@ -51,6 +51,7 @@ const WikiHome         = lazy(() => import('@/wiki/pages/WikiHome'))
 const WikiCharacter    = lazy(() => import('@/wiki/pages/WikiCharacter'))
 const WikiStory        = lazy(() => import('@/wiki/pages/WikiStory'))
 const WikiEdit         = lazy(() => import('@/wiki/pages/WikiEdit'))
+const WikiNew          = lazy(() => import('@/wiki/pages/WikiNew'))
 
 function PageFallback() {
   return (
@@ -100,6 +101,7 @@ export default function App() {
                           <Route path="/wiki/character/:id" element={<WikiCharacter />} />
                           <Route path="/wiki/story/:id" element={<WikiStory />} />
                           <Route path="/edit/:kind/:id" element={<WikiEdit />} />
+                          <Route path="/new/:kind" element={<WikiNew />} />
 
                             <Route path="*" element={<NotFound />} />
                           </Routes>

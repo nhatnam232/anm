@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Sparkles, Users } from 'lucide-react'
+import { BookOpen, BookPlus, Sparkles, UserPlus, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
 import { listCharacters, listStories } from '@/wiki/registry'
 import { stripWikiTags } from '@/wiki/utils/parser'
@@ -22,6 +22,29 @@ export default function WikiHome() {
           {t.homeTitle}
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-text-muted">{t.homeSubtitle}</p>
+
+        {/* Contribution CTAs — front-and-centre so users always know they
+            can grow the wiki without hunting for the button. */}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link
+            to="/new/character"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary-hover keep-white-on-light"
+          >
+            <UserPlus className="h-4 w-4" />
+            {t.charactersCount(0).includes('character')
+              ? '+ Add new character'
+              : '+ Thêm nhân vật mới'}
+          </Link>
+          <Link
+            to="/new/story"
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+          >
+            <BookPlus className="h-4 w-4" />
+            {t.charactersCount(0).includes('character')
+              ? '+ Add new story'
+              : '+ Thêm cốt truyện mới'}
+          </Link>
+        </div>
       </section>
 
       {/* Top characters */}
