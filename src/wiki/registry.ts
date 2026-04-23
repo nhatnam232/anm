@@ -32,7 +32,10 @@ const SEED_CHARACTERS: WikiCharacter[] = [
   {
     id: 'frieren',
     name: 'Frieren',
-    anilistCharacterId: 219472,
+    // anilistCharacterId intentionally null — IDs were unreliable. Cross-link
+    // is now driven by wikipediaSlug + name match.
+    anilistCharacterId: null,
+    wikipediaSlug: 'Frieren',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b219472-uHfeszSE0Y4u.png',
     shortBio: 'Pháp sư Elf trường thọ, từng đồng hành cùng đoàn anh hùng Himmel để đánh bại Ma Vương. / A long-lived elven mage who once accompanied the Hero Himmel to defeat the Demon King.',
     bio:
@@ -56,7 +59,8 @@ The asymmetry of time between elves and humans is the central theme of the story
   {
     id: 'himmel',
     name: 'Himmel',
-    anilistCharacterId: 220033,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Frieren', // No standalone Wikipedia page — falls back to series page.
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b220033-x73R03dpvBKL.png',
     shortBio: 'Kiếm sĩ anh hùng dẫn dắt đoàn đánh bại Ma Vương, có tình cảm sâu sắc với Frieren. / The hero swordsman who led the party to defeat the Demon King, deeply in love with Frieren.',
     bio:
@@ -80,7 +84,9 @@ He is famous for his unconditional kindness, regularly stopping to help stranger
   {
     id: 'tanjiro-kamado',
     name: 'Tanjiro Kamado',
-    anilistCharacterId: 126514,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Tanjiro_Kamado',
+    wikipediaSlugVi: 'Kamado_Tanjirou',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b126514-OKuf3a82P0n3.png',
     shortBio: 'Cậu bé hiền lành mang gánh nặng tìm cách biến em gái Nezuko trở lại làm người. / A kind-hearted boy carrying the burden of turning his sister Nezuko back into a human.',
     bio:
@@ -109,7 +115,8 @@ After returning from selling charcoal in the village one winter day, he found hi
   {
     id: 'nezuko-kamado',
     name: 'Nezuko Kamado',
-    anilistCharacterId: 126515,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Nezuko_Kamado',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b126515-DVbVJC7s0epH.png',
     shortBio: 'Em gái Tanjiro, bị biến thành quỷ nhưng vẫn giữ lương tâm và bảo vệ con người. / Tanjiro\'s sister, turned into a demon but retains her humanity and protects humans.',
     bio:
@@ -134,7 +141,8 @@ Nezuko Kamado is [[Tanjiro Kamado|tanjiro-kamado]]'s younger sister. Turned into
   {
     id: 'eren-yeager',
     name: 'Eren Yeager',
-    anilistCharacterId: 40882,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Eren_Yeager',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b40882-O8dZmBMpLzeu.png',
     shortBio: 'Thanh niên ám ảnh tự do, người sở hữu Titan Tấn Công và Titan Kiến Tạo. / A young man obsessed with freedom, holder of the Attack and Founding Titans.',
     bio:
@@ -160,7 +168,8 @@ After watching his mother eaten alive, he swore to exterminate every Titan and e
   {
     id: 'mikasa-ackerman',
     name: 'Mikasa Ackerman',
-    anilistCharacterId: 40881,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Mikasa_Ackerman',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b40881-NKwbk0gM6Vd9.png',
     shortBio: 'Chị em họ của Eren, chiến binh xuất sắc nhất của thế hệ 104. / Eren\'s adoptive sister and the most skilled warrior of the 104th cadet corps.',
     bio:
@@ -184,7 +193,8 @@ Mikasa Ackerman is the most skilled warrior in the Survey Corps. Saved by [[Eren
   {
     id: 'yuji-itadori',
     name: 'Yuji Itadori',
-    anilistCharacterId: 164471,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Yuji_Itadori',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b164471-PUyTpGaaybLk.png',
     shortBio: 'Học sinh trung học nuốt phải ngón tay Sukuna và trở thành "vật chứa" của vua chú thuật. / High schooler who swallowed Sukuna\'s finger and became the vessel of the King of Curses.',
     bio:
@@ -211,7 +221,8 @@ Yuji Itadori is the protagonist of [[Jujutsu Kaisen|jujutsu-kaisen]]. An ordinar
   {
     id: 'satoru-gojo',
     name: 'Satoru Gojo',
-    anilistCharacterId: 132374,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Satoru_Gojo',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b132374-CWHfu8sH8tSg.png',
     shortBio: 'Pháp sư mạnh nhất hiện tại, sở hữu Six Eyes và kỹ thuật Limitless. / The strongest sorcerer alive, possessor of the Six Eyes and Limitless technique.',
     bio:
@@ -241,7 +252,8 @@ Satoru Gojo is the strongest sorcerer alive in [[Jujutsu Kaisen|jujutsu-kaisen]]
   {
     id: 'monkey-d-luffy',
     name: 'Monkey D. Luffy',
-    anilistCharacterId: 40,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Monkey_D._Luffy',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/b40-K2QxQXIAQGmV.png',
     shortBio: 'Thuyền trưởng Băng Mũ Rơm, người mơ ước trở thành Vua Hải Tặc. / Captain of the Straw Hat Pirates, dreaming of becoming the Pirate King.',
     bio:
@@ -269,7 +281,9 @@ Monkey D. Luffy is captain of the Straw Hat Pirates in [[One Piece|one-piece]]. 
   {
     id: 'naruto-uzumaki',
     name: 'Naruto Uzumaki',
-    anilistCharacterId: 17,
+    anilistCharacterId: null,
+    wikipediaSlug: 'Naruto_Uzumaki',
+    wikipediaSlugVi: 'Uzumaki_Naruto',
     avatarUrl: 'https://s4.anilist.co/file/anilistcdn/character/large/17.jpg',
     shortBio: 'Ninja làng Lá ấp ủ giấc mơ trở thành Hokage và được cả làng công nhận. / A Konoha ninja with the dream of becoming Hokage and earning the village\'s acknowledgment.',
     bio:

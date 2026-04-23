@@ -5,6 +5,7 @@ import WikiTextRenderer from '@/wiki/components/WikiTextRenderer'
 import { getCharacter } from '@/wiki/registry'
 import { useWikiStory } from '@/wiki/hooks/useWikiStory'
 import { useWikiText } from '@/wiki/i18n'
+import WikipediaPanel from '@/wiki/components/WikipediaPanel'
 
 export default function WikiStory() {
   const { id = '' } = useParams<{ id: string }>()
@@ -95,6 +96,9 @@ export default function WikiStory() {
             {t.fullDetails}
           </h2>
           <WikiTextRenderer text={story.body} />
+
+          {/* Wikipedia auto-import — VI first, EN fallback with DeepL translation */}
+          <WikipediaPanel slug={story.wikipediaSlug} slugVi={story.wikipediaSlugVi} />
 
           {characters.length > 0 && (
             <>

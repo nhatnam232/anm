@@ -19,6 +19,7 @@ import seasonRoutes from './routes/season.js'
 import scheduleRoutes from './routes/schedule.js'
 import imageRoutes from './routes/image.js'
 import adminRoutes from './routes/admin.js'
+import wikiImportRoutes from './routes/wiki-import.js'
 
 // load env
 dotenv.config()
@@ -42,6 +43,7 @@ app.use('/api/season', seasonRoutes)
 app.use('/api/schedule', scheduleRoutes)
 app.use('/api/image', imageRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/wiki-import', wikiImportRoutes)
 
 /**
  * health
