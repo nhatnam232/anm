@@ -52,7 +52,7 @@
   ],
   "crons": [
     {
-      "path": "/api/admin/rotate-password?secret=replace-with-CRON_SECRET",
+      "path": "/api/admin/rotate-password",
       "schedule": "0 0 * * *"
     }
   ]
