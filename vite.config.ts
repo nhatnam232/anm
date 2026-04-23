@@ -10,7 +10,9 @@ export default defineConfig({
     // accident, but does drop dead code (incl. our console.log calls thanks
     // to the `drop` flag below). Faster than terser, comparable size.
     minify: 'esbuild',
-    cssMinify: 'lightningcss',
+    // Use esbuild for CSS minification too — avoids needing the optional
+    // `lightningcss` peer-dependency which isn't installed in production.
+    cssMinify: 'esbuild',
     target: 'es2020', // smaller bundle than es2015 since modern browsers all support es2020
     rollupOptions: {
       output: {
