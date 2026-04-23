@@ -43,6 +43,15 @@ const AdminDashboard   = lazy(() => import('@/pages/AdminDashboard'))
 const ActivityFeed     = lazy(() => import('@/pages/ActivityFeed'))
 const Login            = lazy(() => import('@/pages/Login'))
 
+// ── Standalone Fandom Wiki sub-app ──
+// Lives under `/wiki/*` + `/edit/*` routes. Uses its own dark layout
+// (see `src/wiki/components/WikiLayout.tsx`) so it visually feels like a
+// separate site even though it shares React Router + auth.
+const WikiHome         = lazy(() => import('@/wiki/pages/WikiHome'))
+const WikiCharacter    = lazy(() => import('@/wiki/pages/WikiCharacter'))
+const WikiStory        = lazy(() => import('@/wiki/pages/WikiStory'))
+const WikiEdit         = lazy(() => import('@/wiki/pages/WikiEdit'))
+
 function PageFallback() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
@@ -85,6 +94,13 @@ export default function App() {
                           <Route path="/admin" element={<AdminDashboard />} />
                           <Route path="/tos" element={<ToS />} />
                           <Route path="/browse" element={<SearchResults />} />
+
+                          {/* ── Fandom Wiki sub-app ── */}
+                          <Route path="/wiki" element={<WikiHome />} />
+                          <Route path="/wiki/character/:id" element={<WikiCharacter />} />
+                          <Route path="/wiki/story/:id" element={<WikiStory />} />
+                          <Route path="/edit/:kind/:id" element={<WikiEdit />} />
+
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </Suspense>

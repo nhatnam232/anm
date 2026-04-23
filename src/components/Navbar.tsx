@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Compass,
   GitCompareArrows,
+  BookMarked,
   LogOut,
   Menu,
   Search,
@@ -17,11 +18,13 @@ import {
   X,
 } from 'lucide-react'
 
+
 import Logo from './Logo'
 import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import SettingsMenu from './SettingsMenu'
 import CommandPalette from './CommandPalette'
+import ConfirmDialog from './ConfirmDialog'
 import ReloadLink from '@/components/ReloadLink'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
@@ -126,6 +129,7 @@ export default function Navbar() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [exploreOpen, setExploreOpen] = useState(false)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -279,7 +283,14 @@ export default function Navbar() {
       label: t.libraryNav,
       description: lang === 'vi' ? 'Thư viện cá nhân của bạn' : 'Your personal watch list',
     },
+    {
+      to: '/wiki',
+      icon: <BookMarked className="h-4 w-4" />,
+      label: lang === 'vi' ? 'Fandom Wiki' : 'Fandom Wiki',
+      description: lang === 'vi' ? 'Tiểu sử nhân vật & lore do cộng đồng đóng góp' : 'Community-written character & lore wiki',
+    },
   ]
+
   // Mods/Admins/Owners get a quick-link to the dashboard at the bottom.
   if (viewerIsMod) {
     exploreLinks.push({
@@ -445,9 +456,9 @@ export default function Navbar() {
                         {t.myLibrary}
                       </ReloadLink>
                       <button
-                        onClick={async () => {
+                        onClick={() => {
                           setUserMenuOpen(false)
-                          await signOut()
+                          setConfirmSignOut(true)
                         }}
                         className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text transition-colors hover:bg-surface"
                       >
@@ -568,9 +579,9 @@ export default function Navbar() {
                       <UserIcon className="h-4 w-4" /> {t.profile}
                     </ReloadLink>
                     <button
-                      onClick={async () => {
-                        await signOut()
+                      onClick={() => {
                         setIsMenuOpen(false)
+                        setConfirmSignOut(true)
                       }}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-text-muted transition-colors hover:bg-surface hover:text-text"
                     >
@@ -594,6 +605,25 @@ export default function Navbar() {
 
       {/* Global Ctrl+K command palette */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {/* Sign-out confirmation — replaces native confirm() so it respects theme */}
+      <ConfirmDialog
+        open={confirmSignOut}
+        title={lang === 'vi' ? 'Đăng xuất khỏi tài khoản?' : 'Sign out of your account?'}
+        description={
+          lang === 'vi'
+            ? `Bạn sẽ phải đăng nhập lại để truy cập thư viện và bình luận của ${displayName}.`
+            : `You'll need to sign in again to access ${displayName}'s library and comments.`
+        }
+        confirmLabel={t.signOut}
+        cancelLabel={lang === 'vi' ? 'Huỷ' : 'Cancel'}
+        tone="danger"
+        onCancel={() => setConfirmSignOut(false)}
+        onConfirm={async () => {
+          setConfirmSignOut(false)
+          await signOut()
+        }}
+      />
     </>
   )
 }

@@ -99,6 +99,28 @@
   :root.light .text-white:not(.keep-white-on-light):not(.bg-primary):not(.bg-primary-hover) {
     color: rgb(15 23 42);
   }
+
+  /*
+   * READABILITY BOOST: lots of micro-typography on the site uses
+   * `text-[10px]`, `text-[11px]`, `text-xs` — fine on dark mode but tiny on
+   * a bright background. We bump the minimum readable size + nudge font
+   * weight up so chips/badges stay punchy in light mode.
+   */
+  :root.light .text-\[10px\],
+  :root.light .text-\[11px\] {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  :root.light .text-xs {
+    font-weight: 500;
+  }
+  /* Card chips / pills carrying #ID, episode count, etc. — make their numeric
+     monospace strings actually visible in light mode. */
+  :root.light .font-mono.text-\[10px\],
+  :root.light .font-mono.text-\[11px\],
+  :root.light .font-mono.text-xs {
+    font-weight: 600;
+  }
   /* Keep text-white on buttons / pills that have a dark/colored background */
   :root.light .bg-primary .text-white,
   :root.light .bg-primary-hover .text-white,
@@ -243,6 +265,15 @@
 .vinyl-spin.is-paused {
   animation-play-state: paused;
 }
+
+/* Profile banner Spotify badge — three bars bouncing in sync with playback.
+   We can't read real audio peaks from the embed iframe (cross-origin), so
+   the bars use a fake but consistent rhythm tuned to feel "musical". */
+@keyframes spotify-beat {
+  0%, 100% { transform: scaleY(0.45); }
+  50%      { transform: scaleY(1); }
+}
+
 
 /* Spoiler tag — locked then revealed */
 .spoiler-tag {

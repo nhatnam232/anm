@@ -93,7 +93,10 @@ export default function AnimeCard({ anime, onAuthRequired }: AnimeCardProps) {
             e.currentTarget.style.visibility = 'hidden'
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        {/* Hover gradient — uses pure black so the readout text below stays
+            white regardless of theme. (`from-background` would turn near-white
+            in light mode → unreadable hover stats.) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
         {anime.status && (
           <div className={`absolute left-2 top-2 rounded px-2 py-1 text-xs font-medium text-white backdrop-blur-sm ${statusColor}`}>
@@ -129,10 +132,12 @@ export default function AnimeCard({ anime, onAuthRequired }: AnimeCardProps) {
           <Heart className={`h-4 w-4 ${favorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
 
+        {/* Hover overlay readout — explicit `text-white` + `keep-white-on-light`
+            because it sits over a dark hover gradient in BOTH themes. */}
         <div className="absolute bottom-0 left-0 right-0 z-10 translate-y-full p-4 transition-transform duration-300 group-hover:translate-y-0">
-          <div className="mb-1 flex items-center gap-2 text-sm text-gray-300">
+          <div className="mb-1 flex items-center gap-2 text-sm font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] keep-white-on-light">
             {safeScore !== null && (
-              <span className="flex items-center gap-1 text-yellow-400">
+              <span className="flex items-center gap-1 text-yellow-300 keep-white-on-light">
                 <Star className="h-4 w-4 fill-current" />
                 {safeScore.toFixed(1)}
               </span>

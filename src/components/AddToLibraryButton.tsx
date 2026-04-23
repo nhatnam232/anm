@@ -5,6 +5,14 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/providers/ToastProvider'
 import { useLangContext } from '@/providers/LangProvider'
+import {
+  AwCompletedIcon,
+  AwDroppedIcon,
+  AwOnHoldIcon,
+  AwPlanToWatchIcon,
+  AwWatchingIcon,
+} from '@/components/AwIcons'
+import type { ComponentType } from 'react'
 
 type WatchStatus = 'watching' | 'completed' | 'plan_to_watch' | 'dropped' | 'on_hold'
 
@@ -22,12 +30,13 @@ const STATUS_OPTIONS: Array<{
   vi: string
   dot: string
   ring: string
+  Icon: ComponentType<{ className?: string }>
 }> = [
-  { key: 'plan_to_watch', en: 'Plan to Watch', vi: 'Muốn xem', dot: 'bg-purple-400', ring: 'ring-purple-400/40' },
-  { key: 'watching',      en: 'Watching',      vi: 'Đang xem',  dot: 'bg-blue-400',   ring: 'ring-blue-400/40' },
-  { key: 'completed',     en: 'Completed',     vi: 'Đã xem',    dot: 'bg-green-400',  ring: 'ring-green-400/40' },
-  { key: 'on_hold',       en: 'On Hold',       vi: 'Tạm dừng',  dot: 'bg-amber-400',  ring: 'ring-amber-400/40' },
-  { key: 'dropped',       en: 'Dropped',       vi: 'Đã bỏ',     dot: 'bg-red-400',    ring: 'ring-red-400/40' },
+  { key: 'plan_to_watch', en: 'Plan to Watch', vi: 'Muốn xem', dot: 'bg-purple-400', ring: 'ring-purple-400/40', Icon: AwPlanToWatchIcon },
+  { key: 'watching',      en: 'Watching',      vi: 'Đang xem',  dot: 'bg-blue-400',   ring: 'ring-blue-400/40',   Icon: AwWatchingIcon },
+  { key: 'completed',     en: 'Completed',     vi: 'Đã xem',    dot: 'bg-green-400',  ring: 'ring-green-400/40',  Icon: AwCompletedIcon },
+  { key: 'on_hold',       en: 'On Hold',       vi: 'Tạm dừng',  dot: 'bg-amber-400',  ring: 'ring-amber-400/40',  Icon: AwOnHoldIcon },
+  { key: 'dropped',       en: 'Dropped',       vi: 'Đã bỏ',     dot: 'bg-red-400',    ring: 'ring-red-400/40',    Icon: AwDroppedIcon },
 ]
 
 export default function AddToLibraryButton({
@@ -236,40 +245,42 @@ export default function AddToLibraryButton({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 12 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="relative z-10 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95 shadow-2xl"
+              className="relative z-10 w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-card text-text shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-start justify-between gap-3 border-b border-white/10 px-5 py-4">
+              <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/30">
-                    <BookmarkPlus className="h-5 w-5 text-white" />
+                    <BookmarkPlus className="h-5 w-5 text-white keep-white-on-light" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">
+                    <h3 className="text-sm font-bold text-text">
                       {lang === 'vi' ? 'Thư viện cá nhân' : 'My Library'}
                     </h3>
-                    <p className="text-xs text-gray-400">{animeTitle}</p>
+                    <p className="text-xs text-text-muted">{animeTitle}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-white/10 p-1.5 text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                  className="rounded-full border border-border p-1.5 text-text-muted transition-colors hover:bg-surface hover:text-text"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Status options */}
+              {/* Status options — uses custom AW icons (not generic lucide ones)
+                  so the brand voice carries through the most-used flow. */}
               <div className="px-3 py-3">
-                <p className="px-2 pb-2 text-[11px] uppercase tracking-widest text-gray-500">
+                <p className="px-2 pb-2 text-[11px] uppercase tracking-widest text-text-muted">
                   {lang === 'vi' ? 'Chọn trạng thái theo dõi' : 'Pick a tracking status'}
                 </p>
                 <ul className="space-y-1">
                   {STATUS_OPTIONS.map((opt) => {
                     const active = opt.key === currentStatus
                     const busy = busyKey === opt.key
+                    const Icon = opt.Icon
                     return (
                       <li key={opt.key}>
                         <motion.button
@@ -279,10 +290,16 @@ export default function AddToLibraryButton({
                           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all disabled:opacity-50 ${
                             active
                               ? `bg-primary/15 text-primary ring-1 ${opt.ring}`
-                              : 'bg-white/[0.02] text-gray-200 hover:bg-white/[0.06]'
+                              : 'bg-surface text-text hover:bg-surface/80'
                           }`}
                         >
-                          <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${opt.dot}`} />
+                          <span
+                            className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${
+                              active ? 'bg-primary/20 text-primary' : `${opt.dot}/20 text-text-muted`
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </span>
                           <span className="flex-1 text-left font-medium">{label(opt)}</span>
                           {busy ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -298,11 +315,11 @@ export default function AddToLibraryButton({
 
               {/* Footer */}
               {isAdded && (
-                <div className="border-t border-white/10 px-3 py-3">
+                <div className="border-t border-border px-3 py-3">
                   <button
                     onClick={() => void removeFromLibrary()}
                     disabled={busyKey !== null}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-2 text-sm font-medium text-red-600 dark:text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
                   >
                     {busyKey === 'remove' ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

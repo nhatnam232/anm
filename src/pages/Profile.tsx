@@ -24,6 +24,8 @@ import ReloadLink from '@/components/ReloadLink'
 import SpotifyEmbed from '@/components/SpotifyEmbed'
 import UserAvatar from '@/components/UserAvatar'
 import QuestsPanel from '@/components/QuestsPanel'
+import ProfileSpotifyBadge from '@/components/ProfileSpotifyBadge'
+import DatePicker from '@/components/DatePicker'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
 import { useToast } from '@/providers/ToastProvider'
@@ -372,6 +374,18 @@ export default function Profile() {
               className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent"
             />
 
+            {/* Floating Spotify badge — anchored to LEFT of the banner so the
+                cover edit buttons stay where users expect them on the right.
+                Hidden when the user has no Spotify URL set. */}
+            {profile?.spotify_url && (
+              <div className="absolute left-3 top-3 z-10">
+                <ProfileSpotifyBadge
+                  spotifyUrl={profile.spotify_url}
+                  fromUser={profile.display_name ?? profile.username ?? null}
+                />
+              </div>
+            )}
+
             {/* Cover edit controls — only shown to the owner */}
             <div className="absolute right-3 top-3 z-10 flex gap-2">
               <button
@@ -407,11 +421,15 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Avatar overlapping the bottom edge of the cover */}
+          {/* Avatar overlapping the bottom edge of the cover.
+              IMPORTANT: only the avatar gets the negative margin so the
+              display-name + @username stay UNDER the banner edge. Putting
+              `-mt-14` on the wrapper (old code) pushed the whole text block
+              up onto the banner image and made @handle unreadable. */}
           <div className="px-6 pb-6 pt-2 sm:px-8">
-            <div className="-mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-5">
-                <div className="relative inline-flex">
+                <div className="relative -mt-16 inline-flex sm:-mt-20">
                   <UserAvatar
                     src={avatar}
                     name={displayName || user.email}
@@ -430,11 +448,11 @@ export default function Profile() {
                   </label>
                 </div>
 
-                <div className="min-w-0">
+                <div className="min-w-0 pt-1">
                   <h1 className="text-2xl font-bold text-text sm:text-3xl">
                     {profile?.display_name || user.user_metadata?.full_name || user.email}
                   </h1>
-                  <p className="text-sm text-text-muted">@{profile?.username || 'user'}</p>
+                  <p className="text-sm font-medium text-text-muted">@{profile?.username || 'user'}</p>
                   {viewerBadges.length > 0 && (
                     <div className="mt-2">
                       <BadgeRow ids={viewerBadges} lang={lang} max={5} size="sm" />
@@ -582,11 +600,12 @@ export default function Profile() {
                   <label className="mb-2 block text-sm text-text">
                     {lang === 'vi' ? 'Ngày sinh' : 'Birthday'}
                   </label>
-                  <input
-                    type="date"
+                  {/* Custom themed date-picker — no more native OS chrome */}
+                  <DatePicker
                     value={birthday}
-                    onChange={(e) => setBirthday(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text focus:border-primary focus:outline-none"
+                    onChange={setBirthday}
+                    max={new Date().toISOString().slice(0, 10)}
+                    placeholder={lang === 'vi' ? 'Chọn ngày sinh' : 'Pick your birthday'}
                   />
                 </div>
               </div>

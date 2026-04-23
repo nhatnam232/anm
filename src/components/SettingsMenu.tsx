@@ -140,7 +140,17 @@ export default function SettingsMenu({ compact = false }: { compact?: boolean })
                     type="button"
                     role="menuitemradio"
                     aria-checked={active}
-                    onClick={() => setLang(opt.key)}
+                    onClick={() => {
+                      if (lang !== opt.key) {
+                        setLang(opt.key)
+                        // Hard-reload so all server-rendered strings, cached
+                        // queries, and i18n strings re-fetch in the new lang.
+                        // Tiny delay so localStorage write commits before reload.
+                        setTimeout(() => window.location.reload(), 80)
+                      } else {
+                        setOpen(false)
+                      }
+                    }}
                     className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium transition-all ${
                       active
                         ? 'bg-primary/15 text-primary ring-1 ring-primary/40'
