@@ -12,7 +12,7 @@
  * old caches are evicted on activate.
  */
 
-const VERSION = 'animewiki-v2.0.0'
+const VERSION = 'animewiki-v2.1.0'
 const SHELL_CACHE = `${VERSION}-shell`
 const IMAGE_CACHE = `${VERSION}-img`
 const RUNTIME_CACHE = `${VERSION}-runtime`
