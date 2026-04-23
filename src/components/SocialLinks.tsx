@@ -4,8 +4,8 @@
  */
 import { Facebook } from 'lucide-react'
 
-export const DISCORD_INVITE = 'https://discord.gg/animewiki' // TODO: replace with real invite if available
-export const FACEBOOK_URL  = 'https://facebook.com/jadesminos'
+export const DISCORD_INVITE = 'https://dsc.gg/animewiki'
+export const FACEBOOK_URL   = 'https://facebook.com/jadesminos'
 
 type Props = {
   /** Render as compact icon-only buttons (for navbar). Default false → labelled pills. */

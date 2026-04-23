@@ -114,6 +114,33 @@
   :root.light a:hover .text-white {
     color: rgb(255 255 255);
   }
+
+  /* AnimeCard / AnimePreviewModal: titles sit on a dark gradient overlay
+     above the cover image. The gradient is `from-black/90 via-black/40` so
+     even in light mode the text is over a dark background. Force keep-white
+     for any element with a `bg-gradient-to-t` ancestor (covers most cards). */
+  :root.light .bg-gradient-to-t .text-white,
+  :root.light [class*="from-black"] .text-white,
+  :root.light .bg-black\/90 .text-white,
+  :root.light .bg-black\/80 .text-white,
+  :root.light .bg-black\/70 .text-white {
+    color: rgb(255 255 255) !important;
+  }
+
+  /* AnimeCard root usually has class `group` and uses absolute-positioned
+     gradient overlays for the title block. Force ALL text-white inside
+     `group` element (which is the card root) to stay white. */
+  :root.light a.group .text-white,
+  :root.light div.group .text-white {
+    color: rgb(255 255 255);
+  }
+
+  /* Modal popups (AnimePreviewModal, dialogs over image) — they use a dark
+     backdrop image. */
+  :root.light [role="dialog"] .text-white,
+  :root.light .modal-on-image .text-white {
+    color: rgb(255 255 255);
+  }
 }
 
 :root {

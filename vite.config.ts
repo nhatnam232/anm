@@ -6,16 +6,37 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1000,
     sourcemap: false,
+    // esbuild is the default minifier and does NOT mangle property names by
+    // accident, but does drop dead code (incl. our console.log calls thanks
+    // to the `drop` flag below). Faster than terser, comparable size.
+    minify: 'esbuild',
+    cssMinify: 'lightningcss',
+    target: 'es2020', // smaller bundle than es2015 since modern browsers all support es2020
     rollupOptions: {
       output: {
+        // Stable chunk names so service-worker cache invalidation works correctly
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'lucide': ['lucide-react'],
           'supabase': ['@supabase/supabase-js'],
           'lottie': ['@lottiefiles/react-lottie-player'],
+          'query':   ['@tanstack/react-query'],
+          'helmet':  ['react-helmet-async'],
         },
       },
     },
+  },
+  esbuild: {
+    // Strip console.log/debug/info + debugger statements from production
+    // bundles. We KEEP console.warn + console.error since they surface real
+    // bugs to telemetry.
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug', 'console.info', 'console.table'],
+    // Mangle private property names (those starting with `_`) for smaller
+    // bundles + slightly harder reverse engineering.
+    mangleProps: /^_/,
   },
   plugins: [
     react(),

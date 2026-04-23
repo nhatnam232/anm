@@ -582,7 +582,7 @@ const vi: Translation = {
 
   searchPlaceholder: 'Tìm kiếm tên anime...',
   home: 'Trang chủ',
-  browse: 'Khám phá',
+  browse: 'Duyệt anime',
   profile: 'Hồ sơ',
   signIn: 'Đăng nhập',
   signOut: 'Đăng xuất',
