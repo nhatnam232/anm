@@ -1144,8 +1144,27 @@ create policy "admin_passwords_no_direct_access" on public.admin_passwords for s
 
 create or replace function public.rotate_admin_password()
 returns text language plpgsql security definer set search_path = public as $$
-declare new_password text; alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; i integer;
+declare
+  new_password text;
+  alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  i integer;
+  caller_uid uuid := auth.uid();
+  is_owner boolean := false;
 begin
+  -- Service-role calls (cron) have NULL auth.uid() and bypass the badge check.
+  -- Browser calls require an owner/admin badge so a regular user can't lock
+  -- mods out by spamming the rotate RPC.
+  if caller_uid is not null then
+    select exists (
+      select 1 from public.profiles
+      where id = caller_uid
+        and badges && array['owner','admin']::text[]
+    ) into is_owner;
+    if not is_owner then
+      raise exception 'Only owner/admin can rotate the admin password';
+    end if;
+  end if;
+
   new_password := '';
   for i in 1..16 loop
     new_password := new_password || substr(alphabet, 1 + (random() * (length(alphabet) - 1))::int, 1);
@@ -1155,9 +1174,16 @@ begin
   on conflict (valid_for_date) do update
     set password_hash = excluded.password_hash, created_at = now();
   delete from public.admin_passwords where valid_for_date < current_date - interval '7 days';
+
+  insert into public.audit_logs (actor_id, action, target_type, target_id, reason)
+  values (caller_uid, 'login', 'admin_password_rotate', current_date::text,
+          case when caller_uid is null then 'service-role' else 'manual-owner' end);
+
   return new_password;
 end;
 $$;
+revoke all on function public.rotate_admin_password() from anon;
+grant execute on function public.rotate_admin_password() to authenticated, service_role;
 
 create or replace function public.verify_admin_password(candidate text)
 returns boolean language plpgsql security definer set search_path = public as $$

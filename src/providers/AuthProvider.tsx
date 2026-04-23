@@ -311,8 +311,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [updateProfile])
 
   const signOut = useCallback(async () => {
+    // Trigger CSS fade-out so the transition feels intentional, not janky.
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add('is-signing-out')
+    }
     await supabase.auth.signOut()
     setProfile(null)
+    // Tiny delay to let the fade animation breathe, then hard-reload to wipe
+    // any lingering React Query cache, ToS modal state, etc.
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.location.assign('/')
+      }, 350)
+    }
   }, [])
 
 

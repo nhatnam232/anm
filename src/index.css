@@ -280,6 +280,35 @@
   transition-duration: 180ms;
   transition-timing-function: ease;
 }
+
+/*
+ * Sign-out fade. The AuthProvider adds `is-signing-out` to <html> right before
+ * it kicks off `supabase.auth.signOut()`, then waits ~350ms before
+ * `window.location.assign('/')`. The page fades to black + tiny shrink during
+ * that window so users see something happen instead of a hard URL flip.
+ */
+:root.is-signing-out body {
+  animation: signout-fade 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes signout-fade {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+    filter: blur(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root.is-signing-out body {
+    animation: none;
+    opacity: 0.6;
+  }
+}
 /* But not for things that already animate on hover/focus to avoid double timing */
 button, a, input, textarea, select {
   transition-duration: 180ms;

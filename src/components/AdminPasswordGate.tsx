@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Lock, ShieldCheck } from 'lucide-react'
+import { Copy, KeyRound, Loader2, Lock, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 import { useLangContext } from '@/providers/LangProvider'
+import { isOwner } from '@/lib/badges'
 
 const TOKEN_STORAGE_KEY = 'anm-admin-gate-ok'
 
@@ -19,8 +20,11 @@ type Props = {
  * env. Once the user enters it correctly, we cache a tiny "ok" flag in
  * sessionStorage that auto-expires when the tab is closed.
  *
- * This is defense-in-depth — losing your account password should NOT be
- * enough to take admin actions.
+ * For owners, an extra "Generate today's password" button calls the
+ * `rotate_admin_password()` RPC directly so:
+ *   • You can bootstrap the gate without configuring a webhook.
+ *   • You can recover if you missed the Discord notification.
+ *   • The plaintext is shown EXACTLY ONCE, then cleared from React state.
  */
 export default function AdminPasswordGate({ children }: Props) {
   const { user, profile } = useAuth()
@@ -29,6 +33,8 @@ export default function AdminPasswordGate({ children }: Props) {
   const [candidate, setCandidate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
 
   // Restore prior session unlock if the cached marker is from today.
   useEffect(() => {
@@ -91,7 +97,11 @@ export default function AdminPasswordGate({ children }: Props) {
         } catch {}
         setUnlocked(true)
       } else {
-        setError(lang === 'vi' ? 'Mật khẩu không đúng. Hãy kiểm tra Discord webhook.' : 'Wrong password. Check the Discord webhook.')
+        setError(
+          lang === 'vi'
+            ? 'Mật khẩu không đúng. Hãy kiểm tra Discord webhook hoặc nhờ owner sinh lại.'
+            : 'Wrong password. Check Discord webhook or ask owner to regenerate.',
+        )
       }
     } catch (err: any) {
       setError(err?.message || 'Verification failed')
@@ -99,6 +109,31 @@ export default function AdminPasswordGate({ children }: Props) {
       setLoading(false)
       setCandidate('')
     }
+  }
+
+  const handleGenerate = async () => {
+    if (!supabase) return
+    if (!isOwner(profile)) return
+    setError(null)
+    setGenerating(true)
+    try {
+      const { data, error } = await supabase.rpc('rotate_admin_password')
+      if (error) throw error
+      if (typeof data === 'string' && data.length > 0) {
+        setGeneratedPassword(data)
+      } else {
+        setError(lang === 'vi' ? 'Không nhận được mật khẩu mới' : 'Did not receive a new password')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Rotate failed')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return
+    void navigator.clipboard.writeText(text)
   }
 
   return (
@@ -113,10 +148,40 @@ export default function AdminPasswordGate({ children }: Props) {
               {lang === 'vi' ? 'Cổng quản trị' : 'Admin Gate'}
             </h1>
             <p className="text-xs text-text-muted">
-              {lang === 'vi' ? 'Yêu cầu mật khẩu hôm nay (gửi qua Discord)' : 'Today\'s password required (sent via Discord)'}
+              {lang === 'vi'
+                ? 'Yêu cầu mật khẩu hôm nay (gửi qua Discord)'
+                : 'Today\'s password required (sent via Discord)'}
             </p>
           </div>
         </div>
+
+        {/* Plaintext-once panel — shown right after the owner clicks Generate */}
+        {generatedPassword && (
+          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">
+            <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
+              <KeyRound className="h-3.5 w-3.5" />
+              {lang === 'vi' ? 'Mật khẩu hôm nay' : 'Today\'s password'}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <code className="flex-1 break-all rounded bg-emerald-950/30 px-2 py-1 font-mono text-base tracking-wider">
+                {generatedPassword}
+              </code>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(generatedPassword)}
+                className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-500/20 px-3 py-1 text-xs hover:bg-emerald-500/30"
+              >
+                <Copy className="h-3 w-3" />
+                {lang === 'vi' ? 'Sao chép' : 'Copy'}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-emerald-200/70">
+              {lang === 'vi'
+                ? 'Mật khẩu chỉ hiện 1 lần — hãy lưu lại hoặc nhập ngay bên dưới.'
+                : 'Shown once — save it or paste it into the box below right now.'}
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="relative">
@@ -148,6 +213,26 @@ export default function AdminPasswordGate({ children }: Props) {
             {lang === 'vi' ? 'Mở khoá' : 'Unlock'}
           </button>
         </form>
+
+        {/* Owner-only escape hatch */}
+        {isOwner(profile) && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="mb-2 text-xs text-amber-200">
+              {lang === 'vi'
+                ? '⚠️ Owner: nếu chưa cấu hình Discord webhook hoặc bỏ lỡ thông báo, bạn có thể sinh mật khẩu mới ngay (sẽ ghi đè mật khẩu hôm nay).'
+                : '⚠️ Owner: if Discord webhook isn\'t set up yet or you missed the notification, you can generate today\'s password right here (overwrites the current one).'}
+            </p>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+              {lang === 'vi' ? 'Sinh mật khẩu hôm nay' : 'Generate today\'s password'}
+            </button>
+          </div>
+        )}
 
         <p className="mt-4 text-[11px] leading-relaxed text-text-muted">
           {lang === 'vi'

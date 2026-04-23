@@ -186,6 +186,36 @@ CRON_SECRET=$(openssl rand -hex 32)      # any random string; matches the secret
 - `vercel.json` has a daily cron that calls `/api/admin/rotate-password?secret=$CRON_SECRET`
 - `<AdminPasswordGate />` blocks `/admin` until the user enters the day's password — defense-in-depth on top of the badge check
 - Every attempt logged in `audit_logs.action='login'`
+- **First-time setup helper**: any owner-badged account sees a "Generate today's password" button on the gate. Plaintext is shown ONCE; copy it before reloading. No webhook required to bootstrap.
+
+#### Where do I get `CRON_SECRET`?
+Pick ANY long random string — it's just a shared secret between Vercel cron and the API. Generate one with:
+
+```bash
+# Python (you already have it installed)
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# OpenSSL
+openssl rand -hex 32
+
+# Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Paste the SAME value into:
+1. `CRON_SECRET` env var on Vercel (Settings → Environment Variables)
+2. The `?secret=...` query string in `vercel.json`'s `crons` entry
+
+#### Where does the password come from on day 1?
+Three ways to get the first password (pick whichever's easiest):
+
+1. **Owner UI**: visit `/admin`, click "Generate today's password" → copy the plaintext shown in the green box.
+2. **Supabase SQL editor** (anytime, even before deploying):
+   ```sql
+   select public.rotate_admin_password();
+   -- Returns: 'XK4TPMV8YQHJL2W7' (or similar) — copy it.
+   ```
+3. **Cron**: configure `ADMIN_PASSWORD_WEBHOOK` (any Discord webhook URL — Server > Integrations > Webhooks > New) and let the daily cron POST it for you.
 
 ### 🤖 Recommendations engine
 - `<RecommendedForYou />` renders on the homepage for signed-in users
