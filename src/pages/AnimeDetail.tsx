@@ -189,6 +189,13 @@ export default function AnimeDetail() {
       return name.includes(normalizedQuery) || cv.includes(normalizedQuery)
     }) ?? []
 
+  const suggestEditAnime = {
+    id: anime.id,
+    title: anime.title,
+    synopsis: anime.synopsis,
+    trailer_url: anime.trailer_url,
+  }
+
   const synopsisBadge =
     synopsisText.loading
       ? t.autoTranslationLoading
@@ -813,12 +820,7 @@ export default function AnimeDetail() {
       <SuggestEditModal
         open={suggestEditOpen}
         onClose={() => setSuggestEditOpen(false)}
-        anime=
-          id: anime.id,
-          title: anime.title,
-          synopsis: anime.synopsis,
-          trailer_url: anime.trailer_url,
-        
+        anime={suggestEditAnime}
       />
     </Layout>
   )
