@@ -20,6 +20,18 @@ const BOT_PATTERNS = [
   'yandex',
   'sogou',
   'exabot',
+  // Google auxiliary & testing crawlers — IMPORTANT: none of these contain the
+  // "googlebot" substring, so they must be listed explicitly. In particular,
+  // Search Console's URL Inspection / Rich Results / Mobile-Friendly tests all
+  // identify as `Google-InspectionTool`, which is exactly how you'd verify
+  // "what Googlebot sees".
+  'google-inspectiontool',  // URL Inspection / Rich Results / Mobile-Friendly
+  'googleother',            // GoogleOther crawler
+  'adsbot-google',          // AdsBot
+  'mediapartners-google',   // AdSense
+  'storebot-google',        // Google Store bot
+  'apis-google',            // APIs-Google
+  'feedfetcher-google',     // Feedfetcher
   // Social-media unfurlers
   'facebookexternalhit',
   'facebot',
@@ -41,6 +53,9 @@ const BOT_PATTERNS = [
   'headlesschrome',
   'lighthouse',
   'pagespeed',
+  'curl/',
+  'wget/',
+  'python-requests',
 ]
 
 /** True if the User-Agent string looks like a known bot. */
