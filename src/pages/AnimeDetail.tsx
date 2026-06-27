@@ -169,6 +169,11 @@ export default function AnimeDetail() {
   const stats = anime.statistics
   const scoreBreakdown: { score: number; votes: number; percentage: number }[] =
     stats?.score_breakdown ?? []
+  // Backend currently returns percentage: 0 for every bucket, so derive each
+  // bar's width from its share of the total votes instead of trusting it.
+  const totalScoreVotes = scoreBreakdown.reduce((sum, b) => sum + (b.votes || 0), 0)
+  const scorePercent = (votes: number) =>
+    totalScoreVotes > 0 ? Math.round((votes / totalScoreVotes) * 100) : 0
   const statusIcons: Record<string, ReactNode> = {
     Finished: <CheckCircle2 className="h-4 w-4 text-green-500" />,
     Ongoing: <Radio className="h-4 w-4 text-blue-400" />,
@@ -406,7 +411,7 @@ export default function AnimeDetail() {
               <div>
                 <h1 className="mb-2 text-3xl font-bold text-white md:text-5xl">{anime.title}</h1>
                 <div className="flex flex-wrap gap-2">
-                  {anime.genres.map((g: string) => (
+                  {(anime.genres ?? []).map((g: string) => (
                     <span key={g} className="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300">
                       {localizeGenre(g, lang)}
                     </span>
@@ -602,13 +607,13 @@ export default function AnimeDetail() {
                           <div
                             key={bucket.score}
                             className="flex items-center gap-3 text-sm"
-                            title={`${bucket.percentage}% (${bucket.votes} votes)`}
+                            title={`${scorePercent(bucket.votes)}% (${bucket.votes} votes)`}
                           >
                             <span className="w-6 text-gray-400">{bucket.score}</span>
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
                               <div
                                 className="h-full bg-gradient-to-r from-violet-500 to-pink-500"
-                                style={{ width: `${bucket.percentage}%` }}
+                                style={{ width: `${scorePercent(bucket.votes)}%` }}
                               />
                             </div>
                             <span className="w-20 text-right text-gray-300">
@@ -704,24 +709,18 @@ export default function AnimeDetail() {
                   <p className="py-8 text-center text-gray-400">{t.noCharFound}</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {anime.characters.map((char: any) => {
-                      const match = filteredCharacters.some((item: any) => item.id === char.id)
-                      return (
+                    {filteredCharacters.map((char: any) => (
                         <ReloadLink
                           key={char.id}
                           to={`/character/${char.id}`}
-                          className={`flex items-center gap-3 rounded-xl border bg-card p-3 transition-all ${
-                            charSearch.trim()
-                              ? match
-                                ? 'border-primary opacity-100 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]'
-                                : 'border-gray-800 opacity-30 hover:opacity-60'
-                              : 'border-gray-800 opacity-100 hover:border-primary'
-                          }`}
+                          className="flex items-center gap-3 rounded-xl border border-gray-800 bg-card p-3 transition-all hover:border-primary"
                         >
                           <img
                             src={char.image}
                             alt={char.name}
                             className="h-14 w-14 rounded-lg bg-gray-800 object-cover"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               e.currentTarget.style.visibility = 'hidden'
                             }}
@@ -745,6 +744,8 @@ export default function AnimeDetail() {
                                   src={char.voice_actor.image}
                                   alt={char.voice_actor.name}
                                   className="h-10 w-10 rounded-lg bg-gray-800 object-cover"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               )}
                               <div className="min-w-0">
@@ -756,8 +757,7 @@ export default function AnimeDetail() {
                             </div>
                           )}
                         </ReloadLink>
-                      )
-                    })}
+                    ))}
                   </div>
                 )}
               </section>
@@ -813,12 +813,12 @@ export default function AnimeDetail() {
       <SuggestEditModal
         open={suggestEditOpen}
         onClose={() => setSuggestEditOpen(false)}
-        anime={{
+        anime=
           id: anime.id,
           title: anime.title,
           synopsis: anime.synopsis,
           trailer_url: anime.trailer_url,
-        }}
+        
       />
     </Layout>
   )

@@ -15,24 +15,6 @@ import { searchAnime, fetchSearchFilters } from '@/lib/api'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useLangContext } from '@/providers/LangProvider'
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-
-function BrowseSkeleton({ count = 12 }: { count?: number }) {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="animate-pulse rounded-xl bg-card">
-          <div className="aspect-[3/4] rounded-t-xl bg-gray-800" />
-          <div className="space-y-2 p-3">
-            <div className="h-3 w-full rounded bg-gray-800" />
-            <div className="h-3 w-2/3 rounded bg-gray-800" />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 24
@@ -150,7 +132,13 @@ export default function BrowsePage() {
     observerRef.current?.disconnect()
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !loadingMore &&
+          !loading &&
+          animeList.length > 0
+        ) {
           const nextPage = page + 1
           setPage(nextPage)
           void loadPage(nextPage, false)
@@ -160,7 +148,7 @@ export default function BrowsePage() {
     )
     if (sentinelRef.current) observerRef.current.observe(sentinelRef.current)
     return () => observerRef.current?.disconnect()
-  }, [hasMore, loadingMore, loading, page, loadPage])
+  }, [hasMore, loadingMore, loading, page, loadPage, animeList.length])
 
   const handleClear = () => {
     setKeyword('')
