@@ -48,33 +48,32 @@ app.use('/api/wiki-import', wikiImportRoutes)
 /**
  * health
  */
-app.use(
-  '/api/health',
-  (_req: Request, res: Response, _next: NextFunction): void => {
-    res.status(200).json({
-      success: true,
-      message: 'ok',
-    })
-  },
-)
-
-/**
- * error handler middleware
- */
-app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(500).json({
-    success: false,
-    error: 'Server internal error',
+app.get('/api/health', (_req: Request, res: Response): void => {
+  res.status(200).json({
+    success: true,
+    message: 'ok',
   })
 })
 
 /**
- * 404 handler
+ * 404 handler — registered after all routes, before the error handler.
  */
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'API not found',
+  })
+})
+
+/**
+ * error handler middleware — must be registered last so Express treats it as
+ * the terminal error handler for anything passed to next(err).
+ */
+app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[server] Unhandled error:', error?.message || error)
+  res.status(500).json({
+    success: false,
+    error: 'Server internal error',
   })
 })
 

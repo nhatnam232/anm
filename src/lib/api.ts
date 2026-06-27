@@ -38,10 +38,10 @@ const postJson = async (path: string, body: Record<string, any>) => {
     },
     body: JSON.stringify(body),
   })
-  const data = await res.json()
+  const data = await res.json().catch(() => ({}))
 
   if (!res.ok) {
-    const error = new Error(data?.error || 'Request failed') as Error & {
+    const error = new Error(data?.error || `Request failed (${res.status})`) as Error & {
       unavailable?: boolean
     }
     error.unavailable = Boolean(data?.unavailable)
