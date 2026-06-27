@@ -52,6 +52,10 @@ export function useLibraryList() {
     queryKey: queryKeys.myLibrary(user?.id ?? 'anon'),
     enabled: Boolean(user && isSupabaseConfigured),
     staleTime: 30_000,
+    // Always refetch on mount: AddToLibraryButton writes to Supabase directly
+    // without touching this cache, so re-opening /library must re-read to show
+    // the latest status changes.
+    refetchOnMount: 'always',
     queryFn: async (): Promise<LibraryEntry[]> => {
       if (!user) return []
       const { data, error } = await supabase
