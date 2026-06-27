@@ -458,6 +458,8 @@ export async function getAnimeDetails(id: number) {
     (media.stats?.statusDistribution ?? []).map((s: any) => [s.status, s.amount]),
   )
 
+  const trailerId = media.trailer && media.trailer.site === 'youtube' ? media.trailer.id : null
+
   return {
     ...base,
     title_english: media.title?.english || '',
@@ -495,14 +497,8 @@ export async function getAnimeDetails(id: number) {
     scored_by: null,
     score: base.score,
     episodes: base.episodes,
-    trailer_url:
-      media.trailer && media.trailer.site === 'youtube'
-        ? `https://www.youtube.com/watch?v=${media.trailer.id}`
-        : null,
-    trailer_embed:
-      media.trailer && media.trailer.site === 'youtube'
-        ? `https://www.youtube.com/embed/${media.trailer.id}`
-        : null,
+    trailer_url: trailerId ? 'https://www.youtube.com/watch?v=' + trailerId : null,
+    trailer_embed: trailerId ? 'https://www.youtube.com/embed/' + trailerId : null,
     trailer_image: media.trailer?.thumbnail || null,
     studio_id: base.studio_id,
     studio_name: base.studio_name,
