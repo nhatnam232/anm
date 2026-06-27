@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Perf: warm up the AniList image CDN connection early so the hero/cover
+         images (the mobile LCP element) start downloading sooner. -->
+    <link rel="preconnect" href="https://s4.anilist.co" crossorigin />
+    <link rel="dns-prefetch" href="https://s4.anilist.co" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="yRfIAHAD9fwynR62WNA07uv6yo1l67ubmiL_c0HRLEQ" />
     <title>Anime Wiki</title>

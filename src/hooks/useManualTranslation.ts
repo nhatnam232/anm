@@ -53,7 +53,8 @@ export function useManualTranslation(
     setUnavailable(false)
 
     try {
-      // translateText now calls MyMemory directly from the browser (no server needed)
+      // translateText posts to the server /api/translate endpoint, which runs the
+      // DeepL -> LibreTranslate -> MyMemory fallback chain and caches into Supabase.
       const res = await translateText(sourceText, 'vi')
 
       if (!res.success || !res.data?.text?.trim()) {
