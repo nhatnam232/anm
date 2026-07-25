@@ -67,6 +67,11 @@ export const fetchAnimeDetails = async (id: number) => fetchJson(`/anime/${id}`)
 export const fetchCharacterDetails = async (id: number) =>
   fetchJson(`/character/${id}`)
 
+// Leaderboard of characters ranked by AniList favourites.
+// Params: gender ('male' | 'female' | 'other' | 'all'), limit, scan_pages.
+export const fetchTopCharacters = async (params: Record<string, any> = {}) =>
+  fetchJson('/character/top', params)
+
 export const fetchStudioDetails = async (id: number) => fetchJson(`/studio/${id}`)
 
 export const searchAnime = async (params: Record<string, any> = {}) =>

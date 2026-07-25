@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express'
-import { getAnimeDetails, getAnimeList, getFeaturedAnime } from '../lib/provider.js'
+import { getAnimeDetails, getAnimeList, getFeaturedAnime, rotationSeed } from '../lib/provider.js'
+import type { RotationPeriod } from '../lib/provider.js'
 
 type CacheItem = { data: any; expires: number; staleUntil: number }
 const store = new Map<string, CacheItem>()
@@ -75,18 +76,28 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
-router.get('/featured', async (_req: Request, res: Response) => {
+/**
+ * Rotating spotlight.
+ *
+ * The cache key embeds the rotation bucket (day or week number). Without it
+ * the cached payload and the shuffle seed would fall out of step and the hero
+ * would keep serving yesterday's picks for up to an hour past midnight.
+ */
+router.get('/featured', async (req: Request, res: Response) => {
   try {
-    const load = () => getFeaturedAnime(5)
-    const cached = getCache('featured')
+    const period: RotationPeriod = req.query.period === 'weekly' ? 'weekly' : 'daily'
+    const key = `featured:${period}:${rotationSeed(period)}`
+    const load = () => getFeaturedAnime(5, period)
+
+    const cached = getCache(key)
     if (cached) {
-      if (cached.stale) refreshInBackground('featured', 3600, load)
+      if (cached.stale) refreshInBackground(key, 3600, load)
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
       return res.json({ success: true, data: cached.data })
     }
 
     const data = await load()
-    setCache('featured', data, 3600)
+    setCache(key, data, 3600)
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     return res.json({ success: true, data })
   } catch (error: any) {
