@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
 import Home from '@/pages/Home'
-import AnimeLoader from '@/components/AnimeLoader'
+import BootLoader from '@/components/BootLoader'
 import TosModal from '@/components/TosModal'
 import SpotifyMiniPlayer from '@/components/SpotifyMiniPlayer'
 import PWAInstaller from '@/components/PWAInstaller'
@@ -17,7 +17,7 @@ import { NotificationsProvider } from '@/providers/NotificationsProvider'
 import { NowPlayingProvider } from '@/providers/NowPlayingProvider'
 import { queryClient } from '@/lib/queryClient'
 
-// ── Code-split heavy routes ──────────────────────────────────────────────────
+// ── Code-split heavy routes ────────────────────────────────────────────────────
 //
 // Home is eagerly imported because it's the LCP for ~80% of traffic. Anything
 // else loads on-demand, shrinking the initial bundle by ~60% and dropping
@@ -53,10 +53,16 @@ const WikiStory        = lazy(() => import('@/wiki/pages/WikiStory'))
 const WikiEdit         = lazy(() => import('@/wiki/pages/WikiEdit'))
 const WikiNew          = lazy(() => import('@/wiki/pages/WikiNew'))
 
+/**
+ * Chunk-download fallback. Deliberately the branded percentage loader and not
+ * a skeleton: this renders before the route's JS has arrived, so there is no
+ * known layout to hold open. Once a route mounts, its own `AnimeLoader`
+ * skeleton takes over for the data fetch.
+ */
 function PageFallback() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <AnimeLoader label="Loading..." />
+      <BootLoader label="Loading..." />
     </div>
   )
 }
