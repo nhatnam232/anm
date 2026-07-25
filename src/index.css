@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Theme tokens ─────────────────────────────────────────────────────────── */
+/* ─── Theme tokens ──────────────────────────────────────────────────────────── */
 /*
  * All colors expressed as `R G B` triplets so Tailwind's `<alpha-value>`
  * machinery can compose them with opacity utilities (e.g. bg-card/80).
@@ -15,9 +15,9 @@
   --color-card: 30 41 59;          /* #1e293b slate-800 */
   --color-surface: 39 49 68;       /* #273144 elevated */
   --color-border: 51 65 85;        /* #334155 slate-700 */
-  --color-primary: 124 58 237;     /* #7c3aed violet-600 */
-  --color-primary-hover: 109 40 217; /* #6d28d9 violet-700 */
-  --color-primary-dark: 88 28 135;  /* #581c87 violet-900 */
+  --color-primary: 20 184 166;     /* #14b8a6 teal-500 */
+  --color-primary-hover: 13 148 136; /* #0d9488 teal-600 */
+  --color-primary-dark: 17 94 89;  /* #115e59 teal-800 */
   --color-text: 248 250 252;       /* #f8fafc slate-50 */
   --color-text-muted: 148 163 184; /* #94a3b8 slate-400 */
 }
@@ -27,9 +27,11 @@
   --color-card: 255 255 255;       /* #ffffff cards pop on light bg */
   --color-surface: 241 245 249;    /* #f1f5f9 slate-100 */
   --color-border: 226 232 240;     /* #e2e8f0 slate-200 */
-  --color-primary: 124 58 237;     /* keep brand color identical */
-  --color-primary-hover: 109 40 217;
-  --color-primary-dark: 88 28 135;
+  /* One step darker than the dark-mode teal: teal-500 under white button
+     text sits below 3:1 contrast on a white card. */
+  --color-primary: 13 148 136;     /* #0d9488 teal-600 */
+  --color-primary-hover: 15 118 110; /* #0f766e teal-700 */
+  --color-primary-dark: 17 94 89;  /* #115e59 teal-800 */
   --color-text: 15 23 42;          /* #0f172a slate-900 */
   --color-text-muted: 71 85 105;   /* #475569 slate-600 */
 }
@@ -180,7 +182,52 @@
   color-scheme: light;
 }
 
-/* ─── Animations ──────────────────────────────────────────────────────────── */
+/* ─── Skeleton placeholders ─────────────────────────────────────────────────── */
+/*
+ * A sweeping highlight rather than `animate-pulse`. Pulse fades the whole
+ * block in and out, which at 60fps across a grid of 24 cards repaints a lot
+ * of area; the sweep is a single transform on a pseudo-element and stays on
+ * the compositor.
+ *
+ * Usage: <div className="skeleton h-4 w-32" />
+ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(var(--color-surface));
+  border-radius: 0.5rem;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.07),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+:root.light .skeleton::after {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(15, 23, 42, 0.06),
+    transparent
+  );
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
 
 .page-enter {
   animation: page-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -254,6 +301,47 @@
   }
 }
 
+/* ─── Language switcher ───────────────────────────────────────────────────── */
+/*
+ * The globe does a full barrel roll on toggle. `perspective` lives on the
+ * wrapper so the Y rotation actually reads as a flip and not a horizontal
+ * squash.
+ */
+.lang-flip {
+  animation: lang-flip 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lang-flip {
+  0% {
+    transform: rotateY(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotateY(180deg) scale(1.18);
+  }
+
+  100% {
+    transform: rotateY(360deg) scale(1);
+  }
+}
+
+/* Label swaps text mid-flip; fade it up so the change doesn't just pop. */
+.lang-label-in {
+  animation: lang-label-in 340ms ease-out;
+}
+
+@keyframes lang-label-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Spotify mini-player rotating disc */
 @keyframes vinylSpin {
   from { transform: rotate(0deg); }
@@ -294,11 +382,11 @@
   background-color: rgb(51 65 85);
 }
 .spoiler-tag.is-revealed {
-  background-color: rgba(124, 58, 237, 0.12);
+  background-color: rgba(20, 184, 166, 0.12);
   color: inherit;
   cursor: default;
   user-select: text;
-  border: 1px solid rgba(124, 58, 237, 0.4);
+  border: 1px solid rgba(20, 184, 166, 0.4);
 }
 
 /* Mobile lag killers: collapse expensive blur on small screens */
@@ -323,12 +411,20 @@
   .surface-float,
   .hero-fade,
   .vinyl-spin,
+  .lang-flip,
+  .lang-label-in,
   .animate-spin,
   .animate-spin-slow,
   .animate-spin-slower,
   .animate-pulse,
   .animate-bounce {
     animation: none !important;
+  }
+
+  /* Skeletons stay visible as flat blocks — only the sweep stops. */
+  .skeleton::after {
+    animation: none !important;
+    opacity: 0;
   }
 }
 

@@ -40,18 +40,24 @@ export default {
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
       },
       boxShadow: {
-        glow: '0 0 24px rgba(124, 58, 237, 0.35)',
-        'glow-lg': '0 0 48px rgba(124, 58, 237, 0.4)',
+        // Teal brand glow. Kept as literal rgba because box-shadow color
+        // interpolation with `rgb(var(--x) / a)` breaks in older Safari.
+        glow: '0 0 24px rgba(20, 184, 166, 0.35)',
+        'glow-lg': '0 0 48px rgba(20, 184, 166, 0.4)',
       },
       keyframes: {
         spinSlow: {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
         },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'spin-slow': 'spinSlow 6s linear infinite',
         'spin-slower': 'spinSlow 12s linear infinite',
+        shimmer: 'shimmer 1.6s ease-in-out infinite',
       },
     },
   },
