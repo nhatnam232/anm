@@ -3,6 +3,12 @@
  * with the correct <title>/<meta> tags so social-media unfurlers and search
  * crawlers see useful previews even though we ship a SPA.
  *
+ * Also generates `dist/sitemap.xml` from the same route table. It used to be a
+ * hand-maintained file in public/ that listed a handful of URLs and drifted
+ * out of date every time a route was added (it was missing /browse, /wiki,
+ * /activity...). Deriving it here means adding a route to STATIC_ROUTES is the
+ * only step needed.
+ *
  * Run via `npm run build:prerender` (which runs vite build first).
  *
  * NOTE: This is intentionally a *light* SSR — we don't render the full React
@@ -22,6 +28,11 @@ type RouteMeta = {
   title: string
   description: string
   image?: string
+  /** Sitemap hints. Omitted entries fall back to weekly / 0.5. */
+  changefreq?: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  priority?: number
+  /** Set false for routes that should be crawled but not prerendered. */
+  sitemapOnly?: boolean
 }
 
 /**
@@ -36,41 +47,87 @@ const STATIC_ROUTES: RouteMeta[] = [
     path: '/',
     title: 'Anime Wiki',
     description: 'Discover seasonal anime, build your library, chat with fans.',
+    changefreq: 'daily',
+    priority: 1.0,
   },
   {
     path: '/search',
     title: 'Browse all anime · Anime Wiki',
     description: 'Search and filter the full AniList catalogue.',
+    changefreq: 'daily',
+    priority: 0.8,
+  },
+  {
+    // Same component as /search, but this is the path the navbar links to, so
+    // it is the one that should rank.
+    path: '/browse',
+    title: 'Browse all anime · Anime Wiki',
+    description: 'Search and filter the full AniList catalogue by genre, year, format and score.',
+    changefreq: 'daily',
+    priority: 0.9,
   },
   {
     path: '/season',
     title: 'Seasonal anime chart · Anime Wiki',
     description: 'See what\'s airing this season — Winter, Spring, Summer, Fall.',
+    changefreq: 'daily',
+    priority: 0.9,
   },
   {
     path: '/schedule',
     title: 'Weekly anime schedule · Anime Wiki',
     description: 'A 7-day calendar of upcoming anime episodes.',
+    changefreq: 'daily',
+    priority: 0.9,
   },
   {
     path: '/ranking',
     title: 'Top rated anime · Anime Wiki',
     description: 'The highest-scored anime according to AniList ratings.',
+    changefreq: 'weekly',
+    priority: 0.8,
   },
   {
     path: '/collections',
     title: 'Community collections · Anime Wiki',
     description: 'Curated anime lists shared by fans.',
+    changefreq: 'daily',
+    priority: 0.7,
   },
   {
     path: '/compare',
     title: 'Compare anime · Anime Wiki',
     description: 'Side-by-side comparison of scores, studios, and ratings.',
+    changefreq: 'monthly',
+    priority: 0.6,
+  },
+  {
+    path: '/activity',
+    title: 'Community activity · Anime Wiki',
+    description: 'The latest ratings, reviews and library updates from the community.',
+    changefreq: 'daily',
+    priority: 0.5,
+  },
+  {
+    path: '/wiki',
+    title: 'Fandom Wiki · Anime Wiki',
+    description: 'Community-written character biographies and story lore.',
+    changefreq: 'daily',
+    priority: 0.9,
+  },
+  {
+    path: '/wiki/all',
+    title: 'All wiki articles · Anime Wiki',
+    description: 'Every character and story article in the fandom wiki, in one index.',
+    changefreq: 'daily',
+    priority: 0.8,
   },
   {
     path: '/tos',
     title: 'Terms of Service · Anime Wiki',
     description: 'Legal terms governing use of Anime Wiki.',
+    changefreq: 'yearly',
+    priority: 0.3,
   },
 ]
 
@@ -111,10 +168,43 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * Builds sitemap.xml. `lastmod` is build time — accurate enough given every
+ * one of these routes renders live data that changes whenever AniList does.
+ */
+function buildSitemap(routes: RouteMeta[]): string {
+  const lastmod = new Date().toISOString().slice(0, 10)
+
+  const entries = routes
+    .map((route) => {
+      const loc = `${SITE_URL}${route.path === '/' ? '/' : route.path}`
+      return [
+        '  <url>',
+        `    <loc>${loc}</loc>`,
+        `    <lastmod>${lastmod}</lastmod>`,
+        `    <changefreq>${route.changefreq ?? 'weekly'}</changefreq>`,
+        `    <priority>${(route.priority ?? 0.5).toFixed(1)}</priority>`,
+        '  </url>',
+      ].join('\n')
+    })
+    .join('\n')
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    entries,
+    '</urlset>',
+    '',
+  ].join('\n')
+}
+
 async function main() {
   const indexHtml = await fs.readFile(path.join(DIST, 'index.html'), 'utf8')
 
+  let prerendered = 0
   for (const route of STATIC_ROUTES) {
+    if (route.sitemapOnly) continue
+
     const outPath =
       route.path === '/'
         ? path.join(DIST, 'index.html')
@@ -122,10 +212,17 @@ async function main() {
     const html = injectMeta(indexHtml, route)
     await fs.mkdir(path.dirname(outPath), { recursive: true })
     await fs.writeFile(outPath, html, 'utf8')
+    prerendered += 1
     console.log('✓ prerendered', route.path, '→', path.relative(DIST, outPath))
   }
 
-  console.log(`\nDone — ${STATIC_ROUTES.length} routes prerendered to dist/`)
+  // Overwrites the copy Vite carried over from public/ — that one is only a
+  // fallback for plain `npm run build`.
+  const sitemapPath = path.join(DIST, 'sitemap.xml')
+  await fs.writeFile(sitemapPath, buildSitemap(STATIC_ROUTES), 'utf8')
+  console.log('✓ sitemap', STATIC_ROUTES.length, 'urls →', path.relative(DIST, sitemapPath))
+
+  console.log(`\nDone — ${prerendered} routes prerendered to dist/`)
 }
 
 main().catch((err) => {

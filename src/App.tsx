@@ -9,6 +9,8 @@ import SpotifyMiniPlayer from '@/components/SpotifyMiniPlayer'
 import PWAInstaller from '@/components/PWAInstaller'
 import CommandPalette, { useCommandPaletteShortcut } from '@/components/CommandPalette'
 import LazyChunkErrorBoundary from '@/components/LazyChunkErrorBoundary'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import ScrollToTop from '@/components/ScrollToTop'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { LangProvider } from '@/providers/LangProvider'
 import { ToastProvider } from '@/providers/ToastProvider'
@@ -48,6 +50,7 @@ const Login            = lazy(() => import('@/pages/Login'))
 // (see `src/wiki/components/WikiLayout.tsx`) so it visually feels like a
 // separate site even though it shares React Router + auth.
 const WikiHome         = lazy(() => import('@/wiki/pages/WikiHome'))
+const WikiAll          = lazy(() => import('@/wiki/pages/WikiAll'))
 const WikiCharacter    = lazy(() => import('@/wiki/pages/WikiCharacter'))
 const WikiStory        = lazy(() => import('@/wiki/pages/WikiStory'))
 const WikiEdit         = lazy(() => import('@/wiki/pages/WikiEdit'))
@@ -79,40 +82,52 @@ export default function App() {
                   <NowPlayingProvider>
                     <Router>
                       <TosModal />
-                      <LazyChunkErrorBoundary>
-                        <Suspense fallback={<PageFallback />}>
-                          <Routes>
-                          <Route path="/" element={<Home />} />
-                          <Route path="/anime/:id" element={<AnimeDetail />} />
-                          <Route path="/character/:id" element={<CharacterDetail />} />
-                          <Route path="/studio/:id" element={<Studio />} />
-                          <Route path="/search" element={<SearchResults />} />
-                          <Route path="/auth/callback" element={<AuthCallback />} />
-                          <Route path="/login" element={<Login />} />
-                          <Route path="/profile" element={<Profile />} />
-                          <Route path="/profile/:userId" element={<Profile />} />
-                          <Route path="/schedule" element={<AnimeCalendar />} />
-                          <Route path="/library" element={<PersonalLibrary />} />
-                          <Route path="/ranking" element={<RankingPage />} />
-                          <Route path="/season" element={<SeasonChart />} />
-                          <Route path="/compare" element={<ComparePage />} />
-                          <Route path="/collections" element={<CollectionsPage />} />
-                          <Route path="/activity" element={<ActivityFeed />} />
-                          <Route path="/admin" element={<AdminDashboard />} />
-                          <Route path="/tos" element={<ToS />} />
-                          <Route path="/browse" element={<SearchResults />} />
+                      {/* Must live inside <Router> to read the location. */}
+                      <ScrollToTop />
+                      {/*
+                        Two boundaries, two different failures:
+                          ErrorBoundary          → render throws (bad API shape)
+                          LazyChunkErrorBoundary → stale chunk after a deploy
+                        Render errors are the outer case because a chunk error
+                        should stay recoverable by reloading that one route.
+                      */}
+                      <ErrorBoundary>
+                        <LazyChunkErrorBoundary>
+                          <Suspense fallback={<PageFallback />}>
+                            <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/anime/:id" element={<AnimeDetail />} />
+                            <Route path="/character/:id" element={<CharacterDetail />} />
+                            <Route path="/studio/:id" element={<Studio />} />
+                            <Route path="/search" element={<SearchResults />} />
+                            <Route path="/auth/callback" element={<AuthCallback />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/profile" element={<Profile />} />
+                            <Route path="/profile/:userId" element={<Profile />} />
+                            <Route path="/schedule" element={<AnimeCalendar />} />
+                            <Route path="/library" element={<PersonalLibrary />} />
+                            <Route path="/ranking" element={<RankingPage />} />
+                            <Route path="/season" element={<SeasonChart />} />
+                            <Route path="/compare" element={<ComparePage />} />
+                            <Route path="/collections" element={<CollectionsPage />} />
+                            <Route path="/activity" element={<ActivityFeed />} />
+                            <Route path="/admin" element={<AdminDashboard />} />
+                            <Route path="/tos" element={<ToS />} />
+                            <Route path="/browse" element={<SearchResults />} />
 
-                          {/* ── Fandom Wiki sub-app ── */}
-                          <Route path="/wiki" element={<WikiHome />} />
-                          <Route path="/wiki/character/:id" element={<WikiCharacter />} />
-                          <Route path="/wiki/story/:id" element={<WikiStory />} />
-                          <Route path="/edit/:kind/:id" element={<WikiEdit />} />
-                          <Route path="/new/:kind" element={<WikiNew />} />
+                            {/* ── Fandom Wiki sub-app ── */}
+                            <Route path="/wiki" element={<WikiHome />} />
+                            <Route path="/wiki/all" element={<WikiAll />} />
+                            <Route path="/wiki/character/:id" element={<WikiCharacter />} />
+                            <Route path="/wiki/story/:id" element={<WikiStory />} />
+                            <Route path="/edit/:kind/:id" element={<WikiEdit />} />
+                            <Route path="/new/:kind" element={<WikiNew />} />
 
-                            <Route path="*" element={<NotFound />} />
-                          </Routes>
-                        </Suspense>
-                      </LazyChunkErrorBoundary>
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </Suspense>
+                        </LazyChunkErrorBoundary>
+                      </ErrorBoundary>
                       {/* Floating global mini-player so Spotify keeps playing across pages */}
                       <SpotifyMiniPlayer />
                       {/* PWA install prompt + service worker registration */}

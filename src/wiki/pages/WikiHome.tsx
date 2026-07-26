@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, BookPlus, Sparkles, UserPlus, Users } from 'lucide-react'
+import { BookOpen, BookPlus, LibraryBig, Sparkles, UserPlus, Users } from 'lucide-react'
 import WikiLayout from '@/wiki/components/WikiLayout'
 import { listCharacters, listStories } from '@/wiki/registry'
 import { shortPreview, proxyImage } from '@/wiki/utils/format'
@@ -11,6 +11,7 @@ export default function WikiHome() {
   const { lang } = useLangContext()
   const characters = listCharacters()
   const stories = listStories()
+  const vi = lang === 'vi'
 
   return (
     <WikiLayout>
@@ -45,6 +46,16 @@ export default function WikiHome() {
             {t.charactersCount(0).includes('character')
               ? '+ Add new story'
               : '+ Thêm cốt truyện mới'}
+          </Link>
+          {/* Entry point for the full index. Without it /wiki/all is
+              unreachable except by typing the URL, and this page only shows a
+              curated slice. */}
+          <Link
+            to="/wiki/all"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-text transition-colors hover:border-primary/60"
+          >
+            <LibraryBig className="h-4 w-4" />
+            {vi ? 'Xem toàn bộ bài viết' : 'Browse all articles'}
           </Link>
         </div>
       </section>
