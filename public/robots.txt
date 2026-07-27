@@ -1,0 +1,15 @@
+# Anime Wiki — https://animewiki.vercel.app
+#
+# Everything is public content, so the only real job here is pointing crawlers
+# at the sitemap. Without this file Google has to discover a SPA's routes by
+# following links it can only see after executing JS, which it does badly.
+
+User-agent: *
+Allow: /
+
+# Auth callback and the admin panel are useless in an index: the first is a
+# redirect target with a one-time token in the URL, the second is gated.
+Disallow: /auth/callback
+Disallow: /admin
+
+Sitemap: https://animewiki.vercel.app/sitemap.xml

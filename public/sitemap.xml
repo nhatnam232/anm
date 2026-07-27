@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Checked-in fallback copy.
+
+  `npm run build:prerender` regenerates this into dist/ from the same route
+  table it prerenders (scripts/prerender.ts), which is the version that should
+  ship. This file only matters when a plain `npm run build` runs, so keep the
+  two in sync by editing STATIC_ROUTES rather than this list.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://animewiki.vercel.app/</loc></url>
-  <url><loc>https://animewiki.vercel.app/search</loc></url>
-  <url><loc>https://animewiki.vercel.app/season</loc></url>
-  <url><loc>https://animewiki.vercel.app/schedule</loc></url>
-  <url><loc>https://animewiki.vercel.app/library</loc></url>
-  <url><loc>https://animewiki.vercel.app/ranking</loc></url>
+  <url><loc>https://animewiki.vercel.app/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://animewiki.vercel.app/browse</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://animewiki.vercel.app/search</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://animewiki.vercel.app/season</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://animewiki.vercel.app/schedule</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://animewiki.vercel.app/ranking</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://animewiki.vercel.app/collections</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://animewiki.vercel.app/compare</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://animewiki.vercel.app/activity</loc><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://animewiki.vercel.app/wiki</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://animewiki.vercel.app/wiki/all</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://animewiki.vercel.app/tos</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

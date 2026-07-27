@@ -4,6 +4,15 @@ type LogoProps = {
   size?: number
   showWordmark?: boolean
   className?: string
+  /**
+   * Scroll the window to the top when the mark or wordmark is clicked.
+   *
+   * ScrollToTop already handles route changes, but clicking the logo while
+   * you are *already* on "/" is a no-op navigation — React Router doesn't
+   * re-render, so nothing resets the scroll and the click feels broken.
+   * Set to false for decorative placements (footer, about page).
+   */
+  scrollTopOnClick?: boolean
 }
 
 /**
@@ -26,13 +35,29 @@ type LogoProps = {
  * mount a Logo, and duplicate SVG defs IDs make the second instance inherit
  * the first one's fill.
  */
-export default function Logo({ size = 32, showWordmark = true, className = '' }: LogoProps) {
+export default function Logo({
+  size = 32,
+  showWordmark = true,
+  className = '',
+  scrollTopOnClick = true,
+}: LogoProps) {
   const uid = useId().replace(/:/g, '')
   const tileGrad = `logo-tile-${uid}`
   const playGrad = `logo-play-${uid}`
 
+  // The handler lives on the wrapper span, not on the <svg>, so the wordmark
+  // ("Anime Wiki") is part of the hit area too. The span is almost always
+  // already inside a <Link to="/">, so this must not preventDefault or stop
+  // propagation — the navigation still has to happen from other routes.
+  const handleClick = scrollTopOnClick
+    ? () => window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+    : undefined
+
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span
+      className={`inline-flex items-center gap-2 ${className}`}
+      onClick={handleClick}
+    >
       <svg
         width={size}
         height={size}
